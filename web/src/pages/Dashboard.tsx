@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, type Resumo } from '../api';
 import { TopBar } from '../components/TopBar';
 import { ImovelNav } from '../components/ImovelNav';
+import { useImovelRealtime } from '../realtime';
 
 const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -12,12 +13,16 @@ export function Dashboard() {
   const [erro, setErro] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => {
+  const carregar = useCallback(() => {
     api
       .get<Resumo>(`/dashboard?imovelId=${id}`)
       .then(setResumo)
       .catch((e) => setErro(e.message));
   }, [id]);
+
+  useEffect(carregar, [carregar]);
+  // Atualiza o resumo ao vivo quando outro usuário lança receita/despesa.
+  useImovelRealtime(id, carregar);
 
   const maxCategoria = resumo ? Math.max(1, ...resumo.despesasPorCategoria.map((d) => d.total)) : 1;
 

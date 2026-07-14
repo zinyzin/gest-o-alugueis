@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   api,
@@ -11,6 +11,7 @@ import {
 } from '../api';
 import { TopBar } from '../components/TopBar';
 import { ImovelNav } from '../components/ImovelNav';
+import { useImovelRealtime } from '../realtime';
 
 const brl = (v: string | number) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -23,7 +24,7 @@ export function Lancamentos() {
   const [inquilinos, setInquilinos] = useState<Inquilino[]>([]);
   const [erro, setErro] = useState('');
 
-  function carregar() {
+  const carregar = useCallback(() => {
     Promise.all([
       api.get<Receita[]>(`/receitas?imovelId=${id}`),
       api.get<Despesa[]>(`/despesas?imovelId=${id}`),
@@ -35,8 +36,10 @@ export function Lancamentos() {
         setInquilinos(i);
       })
       .catch((e) => setErro(e.message));
-  }
-  useEffect(carregar, [id]);
+  }, [id]);
+  useEffect(carregar, [carregar]);
+  // Sincroniza a lista ao vivo com o que o outro usuário lançar.
+  useImovelRealtime(id, carregar);
 
   return (
     <>

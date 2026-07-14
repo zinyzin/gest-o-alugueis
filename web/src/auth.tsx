@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { api, getToken, setToken, clearToken, type Usuario } from './api';
+import { desconectarSocket } from './realtime';
 
 interface AuthCtx {
   usuario: Usuario | null;
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   function sair() {
+    desconectarSocket();
     clearToken();
     setUsuario(null);
   }
