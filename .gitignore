@@ -10,6 +10,9 @@ web-build/
 *.apk
 *.aab
 
+# Arquivos enviados em dev (comprovantes, contratos)
+uploads/
+
 # Ambiente / segredos
 .env
 .env.*
