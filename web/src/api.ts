@@ -33,11 +33,27 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+// Upload de arquivo (multipart) — retorna a URL pública do comprovante/anexo.
+async function uploadArquivo(arquivo: File): Promise<{ url: string }> {
+  const form = new FormData();
+  form.append('arquivo', arquivo);
+  const token = getToken();
+  const res = await fetch('/uploads', {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new ApiError(res.status, data?.mensagem ?? 'Falha no upload');
+  return data;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   del: <T>(path: string) => request<T>('DELETE', path),
+  upload: uploadArquivo,
 };
 
 // Tipos do domínio (espelham o backend).
@@ -49,4 +65,35 @@ export interface Resumo {
   saldo: number;
   receitasPorStatus: { status: string; total: number; qtd: number }[];
   despesasPorCategoria: { categoria: string; total: number; qtd: number }[];
+}
+
+export type FormaPagamento = 'PIX' | 'BOLETO' | 'TRANSFERENCIA' | 'DINHEIRO' | 'CARTAO';
+export type StatusReceita = 'PAGO' | 'ATRASADO' | 'PENDENTE';
+export type CategoriaDespesa = 'AGUA' | 'LUZ' | 'IPTU' | 'CONDOMINIO' | 'MANUTENCAO' | 'REFORMA' | 'IMPOSTOS' | 'OUTRO';
+
+export const FORMAS_PAGAMENTO: FormaPagamento[] = ['PIX', 'BOLETO', 'TRANSFERENCIA', 'DINHEIRO', 'CARTAO'];
+export const STATUS_RECEITA: StatusReceita[] = ['PAGO', 'ATRASADO', 'PENDENTE'];
+export const CATEGORIAS_DESPESA: CategoriaDespesa[] = ['AGUA', 'LUZ', 'IPTU', 'CONDOMINIO', 'MANUTENCAO', 'REFORMA', 'IMPOSTOS', 'OUTRO'];
+
+export interface Inquilino { id: string; nome: string; }
+
+export interface Receita {
+  id: string;
+  dataRecebimento: string;
+  descricao: string;
+  valor: string;
+  formaPagamento: FormaPagamento;
+  status: StatusReceita;
+  inquilino?: { id: string; nome: string } | null;
+}
+
+export interface Despesa {
+  id: string;
+  dataPagamento: string;
+  categoria: CategoriaDespesa;
+  descricao: string;
+  fornecedor?: string | null;
+  valor: string;
+  formaPagamento: FormaPagamento;
+  comprovanteUrl?: string | null;
 }

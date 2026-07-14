@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, type Resumo } from '../api';
 import { TopBar } from '../components/TopBar';
+import { ImovelNav } from '../components/ImovelNav';
 
 const brl = (n: number) => n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -27,6 +28,7 @@ export function Dashboard() {
         <button className="ghost" onClick={() => navigate('/')} style={{ marginBottom: 16 }}>
           ‹ Voltar
         </button>
+        {id && <ImovelNav id={id} />}
         <h2>Resumo financeiro</h2>
 
         {erro && <div className="erro">{erro}</div>}
