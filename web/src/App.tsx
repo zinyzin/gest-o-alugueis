@@ -4,6 +4,7 @@ import { Login } from './pages/Login';
 import { Imoveis } from './pages/Imoveis';
 import { Dashboard } from './pages/Dashboard';
 import { Lancamentos } from './pages/Lancamentos';
+import { Cadastros } from './pages/Cadastros';
 
 export function App() {
   const { usuario, carregando } = useAuth();
@@ -24,6 +25,7 @@ export function App() {
       <Route path="/" element={<Imoveis />} />
       <Route path="/imoveis/:id" element={<Dashboard />} />
       <Route path="/imoveis/:id/lancamentos" element={<Lancamentos />} />
+      <Route path="/imoveis/:id/cadastros" element={<Cadastros />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

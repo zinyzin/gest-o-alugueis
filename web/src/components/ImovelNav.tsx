@@ -14,6 +14,7 @@ export function ImovelNav({ id }: { id: string }) {
     <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
       <NavLink to={`/imoveis/${id}`} end style={estilo}>Resumo</NavLink>
       <NavLink to={`/imoveis/${id}/lancamentos`} style={estilo}>Lançamentos</NavLink>
+      <NavLink to={`/imoveis/${id}/cadastros`} style={estilo}>Cadastros</NavLink>
     </div>
   );
 }

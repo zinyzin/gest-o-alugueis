@@ -75,7 +75,29 @@ export const FORMAS_PAGAMENTO: FormaPagamento[] = ['PIX', 'BOLETO', 'TRANSFERENC
 export const STATUS_RECEITA: StatusReceita[] = ['PAGO', 'ATRASADO', 'PENDENTE'];
 export const CATEGORIAS_DESPESA: CategoriaDespesa[] = ['AGUA', 'LUZ', 'IPTU', 'CONDOMINIO', 'MANUTENCAO', 'REFORMA', 'IMPOSTOS', 'OUTRO'];
 
-export interface Inquilino { id: string; nome: string; }
+export type IndiceReajuste = 'IGPM' | 'IPCA' | 'INPC' | 'OUTRO';
+export const INDICES_REAJUSTE: IndiceReajuste[] = ['IGPM', 'IPCA', 'INPC', 'OUTRO'];
+
+export interface Inquilino {
+  id: string;
+  nome: string;
+  cpfCnpj?: string | null;
+  telefone?: string | null;
+  email?: string | null;
+}
+
+export interface Contrato {
+  id: string;
+  inquilinoId: string;
+  dataInicio: string;
+  dataFim?: string | null;
+  valorAluguel: string;
+  diaVencimento: number;
+  indiceReajuste: IndiceReajuste;
+  valorCaucao?: string | null;
+  anexoUrl?: string | null;
+  inquilino?: { id: string; nome: string } | null;
+}
 
 export interface Receita {
   id: string;
