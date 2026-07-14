@@ -40,3 +40,6 @@ yarn-error.log*
 
 # Cobertura de testes
 coverage/
+
+# Artefatos de build do TS
+*.tsbuildinfo
