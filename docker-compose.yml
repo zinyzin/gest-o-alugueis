@@ -1,0 +1,19 @@
+# PostgreSQL para desenvolvimento local.
+# Uso: docker compose up -d
+# Depois configure backend/.env com:
+#   DATABASE_URL="postgresql://gestao:gestao@localhost:5433/gestao_imovel?schema=public"
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gestao-imovel-pg
+    environment:
+      POSTGRES_USER: gestao
+      POSTGRES_PASSWORD: gestao
+      POSTGRES_DB: gestao_imovel
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
