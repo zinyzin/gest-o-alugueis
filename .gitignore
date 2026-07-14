@@ -10,8 +10,8 @@ web-build/
 *.apk
 *.aab
 
-# Arquivos enviados em dev (comprovantes, contratos)
-uploads/
+# Arquivos enviados em dev (comprovantes, contratos) — só a pasta de storage
+/backend/uploads/
 
 # Ambiente / segredos
 .env
