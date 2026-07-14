@@ -8,6 +8,8 @@ import { contratosRouter } from './contratos/contratos.routes.js';
 import { receitasRouter } from './receitas/receitas.routes.js';
 import { despesasRouter } from './despesas/despesas.routes.js';
 import { uploadsRouter, UPLOAD_DIR } from './uploads/uploads.routes.js';
+import { dashboardRouter } from './dashboard/dashboard.routes.js';
+import { relatoriosRouter } from './relatorios/relatorios.routes.js';
 import { tratarErros } from './middleware/error.js';
 
 export function criarApp() {
@@ -28,6 +30,8 @@ export function criarApp() {
   app.use('/receitas', receitasRouter);
   app.use('/despesas', despesasRouter);
   app.use('/uploads', uploadsRouter);
+  app.use('/dashboard', dashboardRouter);
+  app.use('/relatorios', relatoriosRouter);
 
   app.use(tratarErros);
 
