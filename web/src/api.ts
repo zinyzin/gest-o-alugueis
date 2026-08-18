@@ -17,7 +17,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(path, {
+  const res = await fetch(`/api${path}`, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -38,7 +38,7 @@ async function uploadArquivo(arquivo: File): Promise<{ url: string }> {
   const form = new FormData();
   form.append('arquivo', arquivo);
   const token = getToken();
-  const res = await fetch('/uploads', {
+  const res = await fetch('/api/uploads', {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
