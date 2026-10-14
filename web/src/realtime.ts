@@ -2,14 +2,13 @@ import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { getToken } from './api';
 
-// Em dev o backend roda em :3333; em produção usamos a mesma origem.
-const SOCKET_URL = import.meta.env.DEV ? 'http://localhost:3333' : undefined;
 
 let socket: Socket | null = null;
 
 function obterSocket(): Socket {
   if (!socket) {
-    socket = io(SOCKET_URL, {
+    // Mesma origem: em dev o proxy do Vite encaminha /socket.io para a API.
+    socket = io({
       auth: { token: getToken() },
       autoConnect: true,
     });

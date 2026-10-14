@@ -43,3 +43,7 @@ coverage/
 
 # Artefatos de build do TS
 *.tsbuildinfo
+
+# Saídas do Playwright
+/web/test-results/
+/web/playwright-report/
