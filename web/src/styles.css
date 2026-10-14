@@ -94,3 +94,21 @@ button.danger { color: var(--red); }
 .neg { color: var(--red); }
 .list-item:has(.reajuste) { flex-wrap: wrap; }
 .reajuste { flex-basis: 100%; display: grid; gap: 10px; margin-top: 12px; padding: 12px; border: 1px dashed var(--border); border-radius: 8px; }
+.avisos { position: relative; }
+.sino { position: relative; padding: 6px 10px; font-size: 1.05rem; }
+.contador {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--red); color: #fff; font-size: 0.7rem; line-height: 18px; text-align: center;
+}
+.avisos-lista {
+  position: absolute; right: 0; top: calc(100% + 8px); width: min(360px, 90vw); max-height: 70vh; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); z-index: 10;
+}
+.avisos-topo { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+.aviso {
+  display: grid; gap: 4px; width: 100%; text-align: left; padding: 10px 12px; border-radius: 0;
+  background: transparent; color: var(--text); font-weight: 400; border-bottom: 1px solid var(--border);
+}
+.aviso:last-child { border-bottom: none; }
+.aviso.nao-lido { border-left: 3px solid var(--primary); }
+.aviso span { font-size: 0.85rem; }

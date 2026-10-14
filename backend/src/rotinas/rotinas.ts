@@ -1,6 +1,6 @@
 import { Prisma } from '@prisma/client';
 import { prisma } from '../prisma.js';
-import { emitirParaImovel } from '../realtime.js';
+import { emitirParaImovel, emitirParaPessoasDoImovel } from '../realtime.js';
 import { competencia, diaUtc, diasEntre, formatarData, somarMeses, ultimoDiaDoMes } from './datas.js';
 
 const brl = (v: Prisma.Decimal | number) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -15,7 +15,7 @@ const emVigor = (hoje: Date): Prisma.ContratoWhereInput => ({
 async function avisar(dados: Prisma.NotificacaoUncheckedCreateInput): Promise<boolean> {
   try {
     const n = await prisma.notificacao.create({ data: dados });
-    emitirParaImovel(n.imovelId, 'notificacao:criada', n);
+    await emitirParaPessoasDoImovel(n.imovelId, 'notificacao:criada', n);
     return true;
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') return false;
@@ -34,6 +34,16 @@ export async function gerarAlugueisDoMes(hoje: Date): Promise<number> {
     const vencimento = diaUtc(ano, mes0, Math.min(c.diaVencimento, ultimoDiaDoMes(ano, mes0)));
     // O contrato pode ter começado depois do vencimento deste mês: aí o primeiro aluguel é o do mês seguinte.
     if (vencimento < c.dataInicio) continue;
+    // Aluguel do mês já lançado à mão para este inquilino: não duplica.
+    const manual = await prisma.receita.findFirst({
+      where: {
+        imovelId: c.imovelId,
+        inquilinoId: c.inquilinoId,
+        contratoId: null,
+        dataRecebimento: { gte: diaUtc(ano, mes0, 1), lt: diaUtc(ano, mes0 + 1, 1) },
+      },
+    });
+    if (manual) continue;
     try {
       const r = await prisma.receita.create({
         data: {
@@ -63,16 +73,24 @@ export async function gerarAlugueisDoMes(hoje: Date): Promise<number> {
 export async function marcarAtrasos(hoje: Date): Promise<number> {
   const vencidas = await prisma.receita.findMany({ where: { status: 'PENDENTE', dataRecebimento: { lt: hoje } } });
   for (const r of vencidas) {
-    await prisma.receita.update({ where: { id: r.id }, data: { status: 'ATRASADO' } });
-    emitirParaImovel(r.imovelId, 'receita:atualizada', { id: r.id, status: 'ATRASADO' });
-    await avisar({
-      imovelId: r.imovelId,
-      contratoId: r.contratoId,
-      tipo: 'ALUGUEL_ATRASADO',
-      titulo: 'Receita em atraso',
-      mensagem: `"${r.descricao}" (${brl(r.valor)}) venceu em ${formatarData(r.dataRecebimento)} e não foi marcada como paga.`,
-      chave: `atraso:${r.id}`,
+    // Status e aviso na mesma transação: um não acontece sem o outro.
+    const aviso = await prisma.$transaction(async (tx) => {
+      await tx.receita.update({ where: { id: r.id }, data: { status: 'ATRASADO' } });
+      return tx.notificacao.upsert({
+        where: { chave: `atraso:${r.id}` },
+        update: {},
+        create: {
+          imovelId: r.imovelId,
+          contratoId: r.contratoId,
+          tipo: 'ALUGUEL_ATRASADO',
+          titulo: 'Receita em atraso',
+          mensagem: `"${r.descricao}" (${brl(r.valor)}) venceu em ${formatarData(r.dataRecebimento)} e não foi marcada como paga.`,
+          chave: `atraso:${r.id}`,
+        },
+      });
     });
+    emitirParaImovel(r.imovelId, 'receita:atualizada', { id: r.id, status: 'ATRASADO' });
+    await emitirParaPessoasDoImovel(r.imovelId, 'notificacao:criada', aviso);
   }
   return vencidas.length;
 }

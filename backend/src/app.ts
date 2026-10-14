@@ -12,6 +12,7 @@ import { despesasRouter } from './despesas/despesas.routes.js';
 import { uploadsRouter, UPLOAD_DIR } from './uploads/uploads.routes.js';
 import { dashboardRouter } from './dashboard/dashboard.routes.js';
 import { relatoriosRouter } from './relatorios/relatorios.routes.js';
+import { notificacoesRouter } from './notificacoes/notificacoes.routes.js';
 import { tratarErros } from './middleware/error.js';
 
 export function criarApp() {
@@ -35,6 +36,7 @@ export function criarApp() {
   app.use('/api/uploads', uploadsRouter);
   app.use('/api/dashboard', dashboardRouter);
   app.use('/api/relatorios', relatoriosRouter);
+  app.use('/api/notificacoes', notificacoesRouter);
 
   // Em produção, serve o web buildado (mesma origem → sem CORS, socket direto).
   // A pasta `public` é preenchida com web/dist no build da imagem Docker.

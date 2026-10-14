@@ -123,3 +123,14 @@ describe('aplicar reajuste', () => {
     expect(r.body.dataUltimoReajuste).toBeTruthy();
   });
 });
+
+describe('C1: aluguel lançado à mão', () => {
+  it('não gera de novo o aluguel do mês já lançado manualmente para o inquilino', async () => {
+    const c = await contrato({ dataInicio: '2026-01-01' });
+    await prisma.receita.create({
+      data: { imovelId: c.imovelId, inquilinoId: c.inquilinoId, dataRecebimento: dia('2026-03-08'), descricao: 'Aluguel', valor: 2000, formaPagamento: 'PIX', status: 'PAGO' },
+    });
+    expect(await gerarAlugueisDoMes(dia('2026-03-02'))).toBe(0);
+    expect(await gerarAlugueisDoMes(dia('2026-04-02'))).toBe(1);
+  });
+});
