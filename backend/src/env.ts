@@ -7,6 +7,8 @@ const schema = z.object({
   JWT_EXPIRES_IN: z.string().default('7d'),
   PORT: z.coerce.number().default(3333),
   CORS_ORIGIN: z.string().default('*'),
+  // Se definido, criar conta exige este código (útil com o sistema exposto na internet).
+  CODIGO_CONVITE: z.string().min(6).optional(),
 });
 
 const parsed = schema.safeParse(process.env);

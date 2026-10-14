@@ -76,6 +76,34 @@ imoveisRouter.delete('/:id', async (req, res, next) => {
   }
 });
 
+// Pessoas com acesso ao imóvel.
+imoveisRouter.get('/:id/usuarios', async (req, res, next) => {
+  try {
+    await garantirAcessoImovel(req.usuario!.sub, req.params.id);
+    const vinculos = await prisma.usuarioImovel.findMany({
+      where: { imovelId: req.params.id },
+      include: { usuario: { select: { id: true, nome: true, email: true } } },
+    });
+    res.json(vinculos.map((v) => v.usuario));
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Remove o acesso de uma pessoa. O imóvel nunca fica sem ninguém.
+imoveisRouter.delete('/:id/usuarios/:usuarioId', async (req, res, next) => {
+  try {
+    await garantirAcessoImovel(req.usuario!.sub, req.params.id);
+    const total = await prisma.usuarioImovel.count({ where: { imovelId: req.params.id } });
+    if (total <= 1) return res.status(400).json({ mensagem: 'O imóvel precisa ter ao menos uma pessoa com acesso' });
+    await prisma.usuarioImovel.deleteMany({ where: { imovelId: req.params.id, usuarioId: req.params.usuarioId } });
+    emitirParaImovel(req.params.id, 'acesso:removido', { usuarioId: req.params.usuarioId });
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Compartilha o imóvel com outro usuário (por e-mail).
 const compartilharSchema = z.object({ email: z.string().email() });
 imoveisRouter.post('/:id/compartilhar', async (req, res, next) => {
@@ -89,6 +117,7 @@ imoveisRouter.post('/:id/compartilhar', async (req, res, next) => {
       create: { usuarioId: usuario.id, imovelId: req.params.id },
       update: {},
     });
+    emitirParaImovel(req.params.id, 'acesso:adicionado', { usuarioId: usuario.id });
     res.status(204).end();
   } catch (err) {
     next(err);

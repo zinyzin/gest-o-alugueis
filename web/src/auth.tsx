@@ -6,6 +6,7 @@ interface AuthCtx {
   usuario: Usuario | null;
   carregando: boolean;
   login: (email: string, senha: string) => Promise<void>;
+  registrar: (dados: { nome: string; email: string; senha: string; codigoConvite?: string }) => Promise<void>;
   sair: () => void;
 }
 
@@ -34,13 +35,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUsuario(usuario);
   }
 
+  // Cria a conta e já entra com ela.
+  async function registrar(dados: { nome: string; email: string; senha: string; codigoConvite?: string }) {
+    await api.post('/auth/registrar', dados);
+    await login(dados.email, dados.senha);
+  }
+
   function sair() {
     desconectarSocket();
     clearToken();
     setUsuario(null);
   }
 
-  return <Ctx.Provider value={{ usuario, carregando, login, sair }}>{children}</Ctx.Provider>;
+  return <Ctx.Provider value={{ usuario, carregando, login, registrar, sair }}>{children}</Ctx.Provider>;
 }
 
 export const useAuth = () => useContext(Ctx);

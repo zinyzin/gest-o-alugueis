@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { api, INDICES_REAJUSTE, type Contrato, type Inquilino } from '../api';
+import { api, INDICES_REAJUSTE, type Contrato, type Inquilino, type Pessoa } from '../api';
+import { useAuth } from '../auth';
 import { TopBar } from '../components/TopBar';
 import { ImovelNav } from '../components/ImovelNav';
 import { useImovelRealtime } from '../realtime';
@@ -66,6 +67,8 @@ export function Cadastros() {
           />
         </div>
 
+        <PessoasComAcesso imovelId={id!} />
+
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Inquilinos</h3>
           {inquilinos.length === 0 ? (
@@ -130,6 +133,80 @@ export function Cadastros() {
         </div>
       </div>
     </>
+  );
+}
+
+// Quem acessa o imóvel: compartilhar por e-mail e remover acesso.
+function PessoasComAcesso({ imovelId }: { imovelId: string }) {
+  const { usuario } = useAuth();
+  const [pessoas, setPessoas] = useState<Pessoa[]>([]);
+  const [email, setEmail] = useState('');
+  const [erro, setErro] = useState('');
+  const [aviso, setAviso] = useState('');
+
+  const carregar = useCallback(() => {
+    api.get<Pessoa[]>(`/imoveis/${imovelId}/usuarios`).then(setPessoas).catch((e) => setErro(e.message));
+  }, [imovelId]);
+  useEffect(carregar, [carregar]);
+  useImovelRealtime(imovelId, carregar);
+
+  async function compartilhar(e: FormEvent) {
+    e.preventDefault();
+    setErro('');
+    setAviso('');
+    try {
+      await api.post(`/imoveis/${imovelId}/compartilhar`, { email });
+      setAviso(`Imóvel compartilhado com ${email}.`);
+      setEmail('');
+      carregar();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro ao compartilhar';
+      setErro(msg === 'Usuário não encontrado' ? 'Ninguém cadastrado com esse e-mail. A pessoa precisa criar a conta primeiro.' : msg);
+    }
+  }
+
+  async function remover(p: Pessoa) {
+    if (!window.confirm(`Remover o acesso de ${p.nome} a este imóvel?`)) return;
+    setErro('');
+    setAviso('');
+    try {
+      await api.del(`/imoveis/${imovelId}/usuarios/${p.id}`);
+      carregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao remover acesso');
+    }
+  }
+
+  return (
+    <div className="card">
+      <h3 style={{ marginTop: 0 }}>Pessoas com acesso</h3>
+      {pessoas.map((p) => (
+        <div key={p.id} className="list-item" style={{ cursor: 'default' }}>
+          <div>
+            <strong>{p.nome}</strong>
+            {p.id === usuario?.id && <span className="muted"> (você)</span>}
+            <div className="muted">{p.email}</div>
+          </div>
+          {pessoas.length > 1 && p.id !== usuario?.id && (
+            <button className="ghost small danger" onClick={() => remover(p)}>Remover acesso</button>
+          )}
+        </div>
+      ))}
+      <form onSubmit={compartilhar} className="acoes" style={{ marginTop: 12 }}>
+        <input
+          type="email"
+          placeholder="E-mail de quem vai acessar"
+          aria-label="E-mail para compartilhar"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          style={{ flex: 1, minWidth: 200 }}
+        />
+        <button type="submit">Compartilhar</button>
+      </form>
+      {aviso && <div className="muted" style={{ marginTop: 8 }}>{aviso}</div>}
+      {erro && <div className="erro">{erro}</div>}
+    </div>
   );
 }
 

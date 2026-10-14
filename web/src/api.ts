@@ -58,6 +58,7 @@ export const api = {
 
 // Tipos do domínio (espelham o backend).
 export interface Usuario { id: string; nome: string; email: string; perfil: 'ADMIN' | 'VISUALIZADOR'; }
+export interface Pessoa { id: string; nome: string; email: string; }
 export interface Imovel { id: string; endereco: string; descricao?: string | null; fotos: string[]; }
 export interface Resumo {
   totalReceitas: number;
