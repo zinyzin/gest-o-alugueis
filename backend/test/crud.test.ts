@@ -84,3 +84,23 @@ describe('edição', () => {
     expect(limpo.body.inquilinoId).toBeNull();
   });
 });
+
+describe('exportação CSV', () => {
+  it('neutraliza fórmulas e escapa vírgulas e aspas', async () => {
+    const token = await criarUsuario('dono@teste.com');
+    const auth = { Authorization: `Bearer ${token}` };
+    const imovelId = await criarImovel(token);
+    for (const descricao of ['=HYPERLINK("http://x","clique")', 'Aluguel, março', '@SUM(A1)']) {
+      await api()
+        .post('/api/receitas')
+        .set(auth)
+        .send({ imovelId, dataRecebimento: '2026-02-10', descricao, valor: 10, formaPagamento: 'PIX' })
+        .expect(201);
+    }
+    const res = await api().get(`/api/relatorios/export.csv?imovelId=${imovelId}&tipo=receitas`).set(auth).expect(200);
+    expect(res.text).toContain(`"'=HYPERLINK(""http://x"",""clique"")"`);
+    expect(res.text).toContain('"Aluguel, março"');
+    expect(res.text).toContain("'@SUM(A1)");
+    expect(res.text).not.toMatch(/(^|,)[=@]/m);
+  });
+});

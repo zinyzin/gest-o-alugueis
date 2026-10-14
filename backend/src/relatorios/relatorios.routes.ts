@@ -89,5 +89,9 @@ relatoriosRouter.get('/export.csv', async (req, res, next) => {
 });
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
-// Escapa campos de texto para CSV (aspas e vírgulas).
-const csv = (s: string) => (/[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s);
+// Escapa campos de texto para CSV (aspas e vírgulas). Texto que começa com = + - @ ou
+// tabulação vira fórmula no Excel/Sheets: um apóstrofo na frente o mantém como texto.
+const csv = (texto: string) => {
+  const s = /^[=+\-@\t\r]/.test(texto) ? `'${texto}` : texto;
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+};

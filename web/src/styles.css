@@ -85,3 +85,10 @@ button.danger { color: var(--red); }
 .status.pago { color: var(--green); }
 .status.atrasado { color: var(--red); }
 .status.pendente { color: #d97706; }
+.tabela-rolagem { overflow-x: auto; }
+.tabela { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.tabela th, .tabela td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: right; }
+.tabela th:first-child, .tabela td:first-child { text-align: left; }
+.tabela tfoot th { border-bottom: none; }
+.pos { color: var(--green); }
+.neg { color: var(--red); }
