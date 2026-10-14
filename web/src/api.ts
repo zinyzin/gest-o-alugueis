@@ -131,3 +131,10 @@ export interface Despesa {
   formaPagamento: FormaPagamento;
   comprovanteUrl?: string | null;
 }
+
+// Nomes legíveis dos valores do sistema.
+export const NOME_CATEGORIA: Record<CategoriaDespesa, string> = {
+  AGUA: 'Água', LUZ: 'Luz', IPTU: 'IPTU', CONDOMINIO: 'Condomínio', MANUTENCAO: 'Manutenção',
+  REFORMA: 'Reforma', IMPOSTOS: 'Impostos', OUTRO: 'Outro',
+};
+export const NOME_STATUS: Record<StatusReceita, string> = { PAGO: 'Pago', ATRASADO: 'Atrasado', PENDENTE: 'Pendente' };

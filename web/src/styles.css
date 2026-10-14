@@ -8,6 +8,10 @@
   --primary-text: #ffffff;
   --green: #16a34a;
   --red: #dc2626;
+  /* Séries dos gráficos (paleta categórica validada: slots 1 e 2). */
+  --serie-1: #2a78d6;
+  --serie-2: #eb6834;
+  --grade: #eef0f3;
   color-scheme: light dark;
 }
 @media (prefers-color-scheme: dark) {
@@ -20,6 +24,9 @@
     --primary: #3b82f6;
     --green: #22c55e;
     --red: #ef4444;
+    --serie-1: #3987e5;
+    --serie-2: #d95926;
+    --grade: #222831;
   }
 }
 
@@ -112,3 +119,27 @@ button.danger { color: var(--red); }
 .aviso:last-child { border-bottom: none; }
 .aviso.nao-lido { border-left: 3px solid var(--primary); }
 .aviso span { font-size: 0.85rem; }
+.grafico { display: grid; gap: 8px; }
+.legenda { display: flex; gap: 16px; font-size: 0.85rem; color: var(--muted); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.chave { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.chave.serie-1, .traco.serie-1 { background: var(--serie-1); }
+.chave.serie-2, .traco.serie-2 { background: var(--serie-2); }
+.grafico-area { position: relative; }
+.grafico svg { width: 100%; height: auto; display: block; overflow: visible; }
+.grafico path.serie-1 { fill: var(--serie-1); }
+.grafico path.serie-2 { fill: var(--serie-2); }
+.grafico .grade { stroke: var(--grade); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.grafico .eixo { fill: var(--muted); font-size: 11px; }
+.grafico .foco-mes { fill: var(--grade); }
+.grafico rect:focus { outline: none; }
+.dica {
+  position: absolute; top: 8px; pointer-events: none; white-space: nowrap;
+  background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 0.85rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12); display: grid; gap: 2px;
+}
+.traco { display: inline-block; width: 12px; height: 2px; margin-right: 6px; vertical-align: middle; }
+.filtros { display: flex; flex-wrap: wrap; gap: 8px; align-items: end; margin-bottom: 16px; }
+.filtros .field { margin-bottom: 0; }
+.filtros select, .filtros input { width: auto; }
+.bar.serie-2 { background: var(--serie-2); }
