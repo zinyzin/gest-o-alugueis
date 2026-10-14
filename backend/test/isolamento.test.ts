@@ -66,7 +66,12 @@ describe('isolamento entre usuários', () => {
     await api().delete(`/api/contratos/${c.ids.contrato}`).set(c.intruso).expect(403);
     await api().delete(`/api/inquilinos/${c.ids.inquilino}`).set(c.intruso).expect(403);
     await api().delete(`/api/imoveis/${c.imovelId}`).set(c.intruso).expect(403);
-    expect(await prisma.imovel.count()).toBe(1);
+    // Nada foi alterado nem apagado.
+    expect((await prisma.imovel.findUnique({ where: { id: c.imovelId } }))?.endereco).toBe('Rua Teste, 1');
+    expect((await prisma.inquilino.findUnique({ where: { id: c.ids.inquilino } }))?.nome).toBe('Inquilino');
+    expect(Number((await prisma.contrato.findUnique({ where: { id: c.ids.contrato } }))?.valorAluguel)).toBe(2000);
+    expect(Number((await prisma.receita.findUnique({ where: { id: c.ids.receita } }))?.valor)).toBe(2000);
+    expect(Number((await prisma.despesa.findUnique({ where: { id: c.ids.despesa } }))?.valor)).toBe(300);
   });
 
   it('intruso não cria registros no imóvel alheio nem se autocompartilha', async () => {
@@ -75,6 +80,17 @@ describe('isolamento entre usuários', () => {
       .post('/api/receitas')
       .set(c.intruso)
       .send({ imovelId: c.imovelId, dataRecebimento: '2026-03-10', descricao: 'x', valor: 1, formaPagamento: 'PIX' })
+      .expect(403);
+    await api().post('/api/inquilinos').set(c.intruso).send({ imovelId: c.imovelId, nome: 'x' }).expect(403);
+    await api()
+      .post('/api/contratos')
+      .set(c.intruso)
+      .send({ imovelId: c.imovelId, inquilinoId: c.ids.inquilino, dataInicio: '2026-01-01', valorAluguel: 1, diaVencimento: 5 })
+      .expect(403);
+    await api()
+      .post('/api/despesas')
+      .set(c.intruso)
+      .send({ imovelId: c.imovelId, dataPagamento: '2026-03-05', categoria: 'LUZ', descricao: 'x', valor: 1, formaPagamento: 'PIX' })
       .expect(403);
     await api().post(`/api/imoveis/${c.imovelId}/compartilhar`).set(c.intruso).send({ email: 'intruso@teste.com' }).expect(403);
   });
