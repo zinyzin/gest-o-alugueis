@@ -72,7 +72,18 @@ receitasRouter.put('/:id', async (req, res, next) => {
     const existente = await prisma.receita.findUnique({ where: { id: req.params.id } });
     if (!existente) return res.status(404).json({ mensagem: 'Receita não encontrada' });
     await garantirAcessoImovel(req.usuario!.sub, existente.imovelId);
-    const dados = receitaSchema.omit({ imovelId: true }).partial().parse(req.body);
+    const dados = receitaSchema
+      .omit({ imovelId: true })
+      .partial()
+      .extend({ inquilinoId: z.string().min(1).nullable().optional() })
+      .parse(req.body);
+    // Assim como na criação, o inquilino precisa ser do mesmo imóvel (null desvincula).
+    if (dados.inquilinoId) {
+      const inq = await prisma.inquilino.findUnique({ where: { id: dados.inquilinoId } });
+      if (!inq || inq.imovelId !== existente.imovelId) {
+        return res.status(400).json({ mensagem: 'Inquilino inválido para este imóvel' });
+      }
+    }
     const receita = await prisma.receita.update({ where: { id: req.params.id }, data: dados });
     emitirParaImovel(receita.imovelId, 'receita:atualizada', receita);
     res.json(receita);

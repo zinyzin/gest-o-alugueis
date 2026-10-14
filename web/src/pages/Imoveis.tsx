@@ -9,6 +9,7 @@ export function Imoveis() {
   const [endereco, setEndereco] = useState('');
   const [descricao, setDescricao] = useState('');
   const [erro, setErro] = useState('');
+  const [editando, setEditando] = useState<Imovel | null>(null);
   const navigate = useNavigate();
 
   function carregar() {
@@ -21,16 +22,45 @@ export function Imoveis() {
 
   useEffect(carregar, []);
 
-  async function criar(e: FormEvent) {
+  function editar(im: Imovel) {
+    setEditando(im);
+    setEndereco(im.endereco);
+    setDescricao(im.descricao ?? '');
+  }
+
+  function cancelar() {
+    setEditando(null);
+    setEndereco('');
+    setDescricao('');
+  }
+
+  async function salvar(e: FormEvent) {
     e.preventDefault();
     setErro('');
     try {
-      const novo = await api.post<Imovel>('/imoveis', { endereco, descricao: descricao || undefined });
-      setEndereco('');
-      setDescricao('');
-      setImoveis((atual) => [novo, ...atual]);
+      if (editando) {
+        const atualizado = await api.put<Imovel>(`/imoveis/${editando.id}`, { endereco, descricao });
+        setImoveis((atual) => atual.map((x) => (x.id === atualizado.id ? atualizado : x)));
+      } else {
+        const novo = await api.post<Imovel>('/imoveis', { endereco, descricao: descricao || undefined });
+        setImoveis((atual) => [novo, ...atual]);
+      }
+      cancelar();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Erro ao criar imóvel');
+      setErro(err instanceof Error ? err.message : 'Erro ao salvar imóvel');
+    }
+  }
+
+  async function excluir(im: Imovel) {
+    const aviso = `Excluir o imóvel "${im.endereco}"?\n\nTODOS os inquilinos, contratos, receitas e despesas dele serão apagados, também para quem o imóvel foi compartilhado. Esta ação não pode ser desfeita.`;
+    if (!window.confirm(aviso)) return;
+    setErro('');
+    try {
+      await api.del(`/imoveis/${im.id}`);
+      setImoveis((atual) => atual.filter((x) => x.id !== im.id));
+      if (editando?.id === im.id) cancelar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao excluir imóvel');
     }
   }
 
@@ -52,14 +82,19 @@ export function Imoveis() {
                   <strong>{im.endereco}</strong>
                   {im.descricao && <div className="muted">{im.descricao}</div>}
                 </div>
-                <span className="muted">›</span>
+                {/* stopPropagation: os botões não abrem o imóvel. */}
+                <div className="acoes" onClick={(e) => e.stopPropagation()}>
+                  <button className="ghost small" onClick={() => editar(im)}>Editar</button>
+                  <button className="ghost small danger" onClick={() => excluir(im)}>Excluir</button>
+                  <span className="muted">›</span>
+                </div>
               </div>
             ))
           )}
         </div>
 
-        <form className="card" onSubmit={criar}>
-          <h3 style={{ marginTop: 0 }}>Cadastrar imóvel</h3>
+        <form className={`card${editando ? ' editando' : ''}`} onSubmit={salvar}>
+          <h3 style={{ marginTop: 0 }}>{editando ? 'Editar imóvel' : 'Cadastrar imóvel'}</h3>
           <div className="field">
             <label>Endereço</label>
             <input value={endereco} onChange={(e) => setEndereco(e.target.value)} required />
@@ -69,7 +104,10 @@ export function Imoveis() {
             <input value={descricao} onChange={(e) => setDescricao(e.target.value)} />
           </div>
           {erro && <div className="erro">{erro}</div>}
-          <button type="submit">Adicionar</button>
+          <div className="acoes">
+            <button type="submit">{editando ? 'Salvar alterações' : 'Adicionar'}</button>
+            {editando && <button type="button" className="ghost" onClick={cancelar}>Cancelar</button>}
+          </div>
         </form>
       </div>
     </>

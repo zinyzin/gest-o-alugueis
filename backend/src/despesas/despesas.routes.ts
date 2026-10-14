@@ -68,7 +68,12 @@ despesasRouter.put('/:id', async (req, res, next) => {
     const existente = await prisma.despesa.findUnique({ where: { id: req.params.id } });
     if (!existente) return res.status(404).json({ mensagem: 'Despesa não encontrada' });
     await garantirAcessoImovel(req.usuario!.sub, existente.imovelId);
-    const dados = despesaSchema.omit({ imovelId: true }).partial().parse(req.body);
+    // Na edição, null limpa um campo opcional.
+    const dados = despesaSchema
+      .omit({ imovelId: true })
+      .partial()
+      .extend({ fornecedor: z.string().nullable().optional(), comprovanteUrl: z.string().url().nullable().optional() })
+      .parse(req.body);
     const despesa = await prisma.despesa.update({ where: { id: req.params.id }, data: dados });
     emitirParaImovel(despesa.imovelId, 'despesa:atualizada', despesa);
     res.json(despesa);

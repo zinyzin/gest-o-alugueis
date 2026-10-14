@@ -181,7 +181,8 @@ function FormReceita({ imovelId, inquilinos, editando, onSalvo, onCancelar }: Fo
         dataRecebimento,
         formaPagamento,
         status,
-        inquilinoId: inquilinoId || undefined,
+        // Na edição, campo vazio vira null para limpar o valor salvo.
+        inquilinoId: inquilinoId || (editando ? null : undefined),
       };
       const r = editando
         ? await api.put<Receita>(`/receitas/${editando.id}`, dados)
@@ -249,7 +250,7 @@ function FormDespesa({ imovelId, editando, onSalvo, onCancelar }: FormProps<Desp
         valor: Number(valor),
         dataPagamento,
         categoria,
-        fornecedor: fornecedor || undefined,
+        fornecedor: fornecedor || (editando ? null : undefined),
         formaPagamento,
         comprovanteUrl,
       };

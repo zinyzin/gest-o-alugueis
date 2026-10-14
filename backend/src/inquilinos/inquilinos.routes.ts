@@ -45,7 +45,16 @@ inquilinosRouter.put('/:id', async (req, res, next) => {
     const existente = await prisma.inquilino.findUnique({ where: { id: req.params.id } });
     if (!existente) return res.status(404).json({ mensagem: 'Inquilino não encontrado' });
     await garantirAcessoImovel(req.usuario!.sub, existente.imovelId);
-    const dados = inquilinoSchema.omit({ imovelId: true }).partial().parse(req.body);
+    // Na edição, null limpa um campo opcional.
+    const dados = inquilinoSchema
+      .omit({ imovelId: true })
+      .partial()
+      .extend({
+        cpfCnpj: z.string().nullable().optional(),
+        telefone: z.string().nullable().optional(),
+        email: z.string().email().nullable().optional(),
+      })
+      .parse(req.body);
     const inquilino = await prisma.inquilino.update({ where: { id: req.params.id }, data: dados });
     emitirParaImovel(inquilino.imovelId, 'inquilino:atualizado', inquilino);
     res.json(inquilino);

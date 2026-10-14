@@ -58,7 +58,16 @@ contratosRouter.put('/:id', async (req, res, next) => {
     const existente = await prisma.contrato.findUnique({ where: { id: req.params.id } });
     if (!existente) return res.status(404).json({ mensagem: 'Contrato não encontrado' });
     await garantirAcessoImovel(req.usuario!.sub, existente.imovelId);
-    const dados = contratoSchema.omit({ imovelId: true, inquilinoId: true }).partial().parse(req.body);
+    // Na edição, null limpa um campo opcional (z.coerce transformaria null em 0/1970).
+    const dados = contratoSchema
+      .omit({ imovelId: true, inquilinoId: true })
+      .partial()
+      .extend({
+        dataFim: z.union([z.null(), z.coerce.date()]).optional(),
+        valorCaucao: z.union([z.null(), z.coerce.number().nonnegative()]).optional(),
+        anexoUrl: z.string().url().nullable().optional(),
+      })
+      .parse(req.body);
     const contrato = await prisma.contrato.update({ where: { id: req.params.id }, data: dados });
     emitirParaImovel(contrato.imovelId, 'contrato:atualizado', contrato);
     res.json(contrato);
