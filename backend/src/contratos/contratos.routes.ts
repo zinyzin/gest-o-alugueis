@@ -4,6 +4,8 @@ import { prisma } from '../prisma.js';
 import { autenticar } from '../middleware/auth.js';
 import { garantirAcessoImovel } from '../lib/acesso.js';
 import { emitirParaImovel } from '../realtime.js';
+import { env } from '../env.js';
+import { hojeNoFuso } from '../rotinas/datas.js';
 
 export const contratosRouter = Router();
 contratosRouter.use(autenticar);
@@ -69,6 +71,27 @@ contratosRouter.put('/:id', async (req, res, next) => {
       })
       .parse(req.body);
     const contrato = await prisma.contrato.update({ where: { id: req.params.id }, data: dados });
+    emitirParaImovel(contrato.imovelId, 'contrato:atualizado', contrato);
+    res.json(contrato);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Aplica o reajuste: percentual do índice (pode ser negativo) informado pela pessoa.
+// O novo valor é arredondado aos centavos e a data do reajuste passa a ser hoje.
+contratosRouter.post('/:id/reajuste', async (req, res, next) => {
+  try {
+    const existente = await prisma.contrato.findUnique({ where: { id: req.params.id } });
+    if (!existente) return res.status(404).json({ mensagem: 'Contrato não encontrado' });
+    await garantirAcessoImovel(req.usuario!.sub, existente.imovelId);
+    const { percentual } = z.object({ percentual: z.coerce.number().min(-50).max(100) }).parse(req.body);
+    const novoValor = Math.round(Number(existente.valorAluguel) * (1 + percentual / 100) * 100) / 100;
+    if (novoValor <= 0) return res.status(400).json({ mensagem: 'O reajuste resultaria em valor inválido' });
+    const contrato = await prisma.contrato.update({
+      where: { id: existente.id },
+      data: { valorAluguel: novoValor, dataUltimoReajuste: hojeNoFuso(env.FUSO_HORARIO) },
+    });
     emitirParaImovel(contrato.imovelId, 'contrato:atualizado', contrato);
     res.json(contrato);
   } catch (err) {

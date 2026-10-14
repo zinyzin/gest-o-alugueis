@@ -9,6 +9,10 @@ const schema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   // Se definido, criar conta exige este código (útil com o sistema exposto na internet).
   CODIGO_CONVITE: z.string().min(6).optional(),
+  // Fuso usado para saber que dia é "hoje" nas rotinas (vencimentos, atrasos, avisos).
+  FUSO_HORARIO: z.string().default('America/Sao_Paulo'),
+  // Permite desligar as rotinas automáticas (ex.: numa segunda instância da API).
+  ROTINAS_ATIVAS: z.enum(['true', 'false']).default('true'),
 });
 
 const parsed = schema.safeParse(process.env);

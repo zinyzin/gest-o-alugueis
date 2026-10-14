@@ -55,7 +55,8 @@ model Usuario {
   perfil    Perfil   @default(VISUALIZADOR)
   criadoEm  DateTime @default(now()) @map("criado_em")
 
-  imoveis UsuarioImovel[]
+  imoveis  UsuarioImovel[]
+  leituras NotificacaoLeitura[]
 
   @@map("usuarios")
 }
@@ -79,11 +80,12 @@ model Imovel {
   fotos     String[]
   criadoEm  DateTime @default(now()) @map("criado_em")
 
-  usuarios   UsuarioImovel[]
-  inquilinos Inquilino[]
-  contratos  Contrato[]
-  receitas   Receita[]
-  despesas   Despesa[]
+  usuarios     UsuarioImovel[]
+  inquilinos   Inquilino[]
+  contratos    Contrato[]
+  receitas     Receita[]
+  despesas     Despesa[]
+  notificacoes Notificacao[]
 
   @@map("imoveis")
 }
@@ -104,21 +106,23 @@ model Inquilino {
 }
 
 model Contrato {
-  id                String         @id @default(cuid())
-  imovelId          String         @map("imovel_id")
-  inquilinoId       String         @map("inquilino_id")
-  dataInicio        DateTime       @map("data_inicio")
-  dataFim           DateTime?      @map("data_fim")
-  valorAluguel      Decimal        @map("valor_aluguel") @db.Decimal(12, 2)
-  diaVencimento     Int            @map("dia_vencimento")
-  indiceReajuste    IndiceReajuste @default(IGPM) @map("indice_reajuste")
-  dataUltimoReajuste DateTime?     @map("data_ultimo_reajuste")
-  valorCaucao       Decimal?       @map("valor_caucao") @db.Decimal(12, 2)
-  anexoUrl          String?        @map("anexo_url")
-  criadoEm          DateTime       @default(now()) @map("criado_em")
+  id                 String         @id @default(cuid())
+  imovelId           String         @map("imovel_id")
+  inquilinoId        String         @map("inquilino_id")
+  dataInicio         DateTime       @map("data_inicio")
+  dataFim            DateTime?      @map("data_fim")
+  valorAluguel       Decimal        @map("valor_aluguel") @db.Decimal(12, 2)
+  diaVencimento      Int            @map("dia_vencimento")
+  indiceReajuste     IndiceReajuste @default(IGPM) @map("indice_reajuste")
+  dataUltimoReajuste DateTime?      @map("data_ultimo_reajuste")
+  valorCaucao        Decimal?       @map("valor_caucao") @db.Decimal(12, 2)
+  anexoUrl           String?        @map("anexo_url")
+  criadoEm           DateTime       @default(now()) @map("criado_em")
 
-  imovel    Imovel    @relation(fields: [imovelId], references: [id], onDelete: Cascade)
-  inquilino Inquilino @relation(fields: [inquilinoId], references: [id], onDelete: Cascade)
+  imovel       Imovel        @relation(fields: [imovelId], references: [id], onDelete: Cascade)
+  inquilino    Inquilino     @relation(fields: [inquilinoId], references: [id], onDelete: Cascade)
+  receitas     Receita[]
+  notificacoes Notificacao[]
 
   @@map("contratos")
 }
@@ -132,11 +136,17 @@ model Receita {
   valor           Decimal        @db.Decimal(12, 2)
   formaPagamento  FormaPagamento @map("forma_pagamento")
   status          StatusReceita  @default(PENDENTE)
+  // Preenchidos quando a receita é o aluguel gerado automaticamente pelo contrato.
+  contratoId      String?        @map("contrato_id")
+  competencia     String? // mês de referência, "AAAA-MM"
   criadoEm        DateTime       @default(now()) @map("criado_em")
 
   imovel    Imovel     @relation(fields: [imovelId], references: [id], onDelete: Cascade)
   inquilino Inquilino? @relation(fields: [inquilinoId], references: [id], onDelete: SetNull)
+  contrato  Contrato?  @relation(fields: [contratoId], references: [id], onDelete: SetNull)
 
+  // Um aluguel por contrato e mês: a rotina diária pode rodar várias vezes sem duplicar.
+  @@unique([contratoId, competencia])
   @@map("receitas")
 }
 
@@ -155,4 +165,43 @@ model Despesa {
   imovel Imovel @relation(fields: [imovelId], references: [id], onDelete: Cascade)
 
   @@map("despesas")
+}
+
+enum TipoNotificacao {
+  ALUGUEL_ATRASADO
+  REAJUSTE
+  CONTRATO_VENCENDO
+}
+
+// Avisos gerados pelas rotinas, visíveis a todos com acesso ao imóvel.
+model Notificacao {
+  id         String          @id @default(cuid())
+  imovelId   String          @map("imovel_id")
+  contratoId String?         @map("contrato_id")
+  tipo       TipoNotificacao
+  titulo     String
+  mensagem   String
+  // Identifica o fato avisado (ex.: "reajuste:<contrato>:2027-01") para não repetir o aviso.
+  chave      String          @unique
+  criadoEm   DateTime        @default(now()) @map("criado_em")
+
+  imovel   Imovel               @relation(fields: [imovelId], references: [id], onDelete: Cascade)
+  contrato Contrato?            @relation(fields: [contratoId], references: [id], onDelete: Cascade)
+  leituras NotificacaoLeitura[]
+
+  @@index([imovelId, criadoEm])
+  @@map("notificacoes")
+}
+
+// Quem já leu cada aviso (a leitura é por pessoa).
+model NotificacaoLeitura {
+  usuarioId     String   @map("usuario_id")
+  notificacaoId String   @map("notificacao_id")
+  lidaEm        DateTime @default(now()) @map("lida_em")
+
+  usuario     Usuario     @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  notificacao Notificacao @relation(fields: [notificacaoId], references: [id], onDelete: Cascade)
+
+  @@id([usuarioId, notificacaoId])
+  @@map("notificacoes_leituras")
 }

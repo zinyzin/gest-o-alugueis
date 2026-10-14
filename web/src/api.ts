@@ -95,6 +95,7 @@ export interface Contrato {
   valorAluguel: string;
   diaVencimento: number;
   indiceReajuste: IndiceReajuste;
+  dataUltimoReajuste?: string | null;
   valorCaucao?: string | null;
   anexoUrl?: string | null;
   inquilino?: { id: string; nome: string } | null;

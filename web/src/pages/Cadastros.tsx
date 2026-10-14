@@ -16,6 +16,7 @@ export function Cadastros() {
   const [erro, setErro] = useState('');
   const [editInquilino, setEditInquilino] = useState<Inquilino | null>(null);
   const [editContrato, setEditContrato] = useState<Contrato | null>(null);
+  const [reajustando, setReajustando] = useState<string | null>(null);
 
   const carregar = useCallback(() => {
     Promise.all([
@@ -108,6 +109,7 @@ export function Cadastros() {
                   <div className="muted">
                     {c.dataInicio.slice(0, 10)}
                     {c.dataFim ? ` → ${c.dataFim.slice(0, 10)}` : ''} · venc. dia {c.diaVencimento} · {c.indiceReajuste}
+                    {c.dataUltimoReajuste ? ` (reajustado em ${c.dataUltimoReajuste.slice(0, 10)})` : ''}
                     {c.valorCaucao ? ` · caução ${brl(c.valorCaucao)}` : ''}
                     {c.anexoUrl ? (
                       <>
@@ -119,6 +121,7 @@ export function Cadastros() {
                 </div>
                 <div className="acoes">
                   <span className="value pos" style={{ fontSize: '1rem' }}>{brl(c.valorAluguel)}</span>
+                  <button className="ghost small" onClick={() => setReajustando(reajustando === c.id ? null : c.id)}>Reajustar</button>
                   <button className="ghost small" onClick={() => setEditContrato(c)}>Editar</button>
                   <button
                     className="ghost small danger"
@@ -127,12 +130,52 @@ export function Cadastros() {
                     Excluir
                   </button>
                 </div>
+                {reajustando === c.id && (
+                  <FormReajuste contrato={c} onAplicado={() => { setReajustando(null); carregar(); }} onCancelar={() => setReajustando(null)} />
+                )}
               </div>
             ))
           )}
         </div>
       </div>
     </>
+  );
+}
+
+// Reajuste: a pessoa informa o percentual do índice; o novo valor aparece antes de aplicar.
+function FormReajuste({ contrato, onAplicado, onCancelar }: { contrato: Contrato; onAplicado: () => void; onCancelar: () => void }) {
+  const [percentual, setPercentual] = useState('');
+  const [erro, setErro] = useState('');
+  const atual = Number(contrato.valorAluguel);
+  const p = Number(percentual.replace(',', '.'));
+  const novo = percentual && Number.isFinite(p) ? Math.round(atual * (1 + p / 100) * 100) / 100 : null;
+
+  async function aplicar(e: FormEvent) {
+    e.preventDefault();
+    if (novo === null) return;
+    if (!window.confirm(`Reajustar o aluguel de ${brl(atual)} para ${brl(novo)} (${p}% pelo ${contrato.indiceReajuste})?`)) return;
+    setErro('');
+    try {
+      await api.post(`/contratos/${contrato.id}/reajuste`, { percentual: p });
+      onAplicado();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao reajustar');
+    }
+  }
+
+  return (
+    <form onSubmit={aplicar} className="reajuste" onClick={(e) => e.stopPropagation()}>
+      <div className="field" style={{ marginBottom: 0 }}>
+        <label>Percentual do {contrato.indiceReajuste} acumulado em 12 meses (%)</label>
+        <input inputMode="decimal" value={percentual} onChange={(e) => setPercentual(e.target.value)} placeholder="ex.: 4,5" required />
+      </div>
+      <div className="muted">{novo !== null ? <>Novo valor: <strong>{brl(novo)}</strong></> : `Valor atual: ${brl(atual)}`}</div>
+      <div className="acoes">
+        <button type="submit" disabled={novo === null}>Aplicar reajuste</button>
+        <button type="button" className="ghost" onClick={onCancelar}>Cancelar</button>
+      </div>
+      {erro && <div className="erro">{erro}</div>}
+    </form>
   );
 }
 

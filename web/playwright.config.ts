@@ -17,7 +17,7 @@ export default defineConfig({
       cwd: '../backend',
       port: 3334,
       reuseExistingServer: false,
-      env: { DATABASE_URL, JWT_SECRET: 'segredo-e2e-com-mais-de-16-caracteres', PORT: '3334', CORS_ORIGIN: 'http://localhost:8009' },
+      env: { DATABASE_URL, JWT_SECRET: 'segredo-e2e-com-mais-de-16-caracteres', PORT: '3334', CORS_ORIGIN: 'http://localhost:8009', ROTINAS_ATIVAS: 'false' },
     },
     {
       command: 'npx vite --port 8009 --strictPort',

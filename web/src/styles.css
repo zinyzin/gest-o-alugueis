@@ -92,3 +92,5 @@ button.danger { color: var(--red); }
 .tabela tfoot th { border-bottom: none; }
 .pos { color: var(--green); }
 .neg { color: var(--red); }
+.list-item:has(.reajuste) { flex-wrap: wrap; }
+.reajuste { flex-basis: 100%; display: grid; gap: 10px; margin-top: 12px; padding: 12px; border: 1px dashed var(--border); border-radius: 8px; }

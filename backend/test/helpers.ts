@@ -7,6 +7,8 @@ export const api = () => request(app);
 
 // Apaga todos os dados entre os testes (ordem respeita as chaves estrangeiras).
 export async function limparBanco() {
+  await prisma.notificacaoLeitura.deleteMany();
+  await prisma.notificacao.deleteMany();
   await prisma.despesa.deleteMany();
   await prisma.receita.deleteMany();
   await prisma.contrato.deleteMany();
