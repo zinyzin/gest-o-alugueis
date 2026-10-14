@@ -19,3 +19,8 @@ npm run dev
 - Inquilinos e contratos
 - Lançamentos de receitas e despesas
 - Dashboard (resumo, gráficos) e relatórios
+- Tela de personalização de usuário
+
+## principais funções
+
+-análise de resposta médica
