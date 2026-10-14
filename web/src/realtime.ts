@@ -2,7 +2,6 @@ import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
 import { getToken } from './api';
 
-
 let socket: Socket | null = null;
 
 function obterSocket(): Socket {

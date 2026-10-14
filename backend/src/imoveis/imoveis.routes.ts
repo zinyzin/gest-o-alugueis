@@ -94,9 +94,18 @@ imoveisRouter.get('/:id/usuarios', async (req, res, next) => {
 imoveisRouter.delete('/:id/usuarios/:usuarioId', async (req, res, next) => {
   try {
     await garantirAcessoImovel(req.usuario!.sub, req.params.id);
-    const total = await prisma.usuarioImovel.count({ where: { imovelId: req.params.id } });
-    if (total <= 1) return res.status(400).json({ mensagem: 'O imóvel precisa ter ao menos uma pessoa com acesso' });
-    await prisma.usuarioImovel.deleteMany({ where: { imovelId: req.params.id, usuarioId: req.params.usuarioId } });
+    // Contagem e remoção na mesma transação serializável: duas remoções simultâneas
+    // não conseguem deixar o imóvel sem ninguém.
+    const removido = await prisma.$transaction(
+      async (tx) => {
+        const total = await tx.usuarioImovel.count({ where: { imovelId: req.params.id } });
+        if (total <= 1) return false;
+        await tx.usuarioImovel.deleteMany({ where: { imovelId: req.params.id, usuarioId: req.params.usuarioId } });
+        return true;
+      },
+      { isolationLevel: 'Serializable' },
+    );
+    if (!removido) return res.status(400).json({ mensagem: 'O imóvel precisa ter ao menos uma pessoa com acesso' });
     emitirParaImovel(req.params.id, 'acesso:removido', { usuarioId: req.params.usuarioId });
     res.status(204).end();
   } catch (err) {
