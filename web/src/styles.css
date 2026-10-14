@@ -81,3 +81,7 @@ button:disabled { opacity: 0.6; cursor: default; }
 button.small { padding: 4px 10px; font-size: 0.8rem; font-weight: 500; }
 button.danger { color: var(--red); }
 .card.editando { border-color: var(--primary); }
+.status { font-weight: 600; }
+.status.pago { color: var(--green); }
+.status.atrasado { color: var(--red); }
+.status.pendente { color: #d97706; }

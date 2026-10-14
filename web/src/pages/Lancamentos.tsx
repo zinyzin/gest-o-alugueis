@@ -55,6 +55,16 @@ export function Lancamentos() {
     }
   }
 
+  async function marcarPago(r: Receita) {
+    setErro('');
+    try {
+      const atualizada = await api.put<Receita>(`/receitas/${r.id}`, { status: 'PAGO' });
+      setReceitas((a) => a.map((x) => (x.id === r.id ? { ...x, status: atualizada.status } : x)));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao marcar como pago');
+    }
+  }
+
   // Substitui o item editado na lista (ou o inclui no topo, se for novo).
   const salvarNaLista = <T extends { id: string }>(set: React.Dispatch<React.SetStateAction<T[]>>) => (item: T) =>
     set((a) => (a.some((x) => x.id === item.id) ? a.map((x) => (x.id === item.id ? { ...x, ...item } : x)) : [item, ...a]));
@@ -94,12 +104,16 @@ export function Lancamentos() {
                 <div>
                   <strong>{r.descricao}</strong>
                   <div className="muted">
-                    {r.dataRecebimento.slice(0, 10)} · {r.formaPagamento} · {r.status}
+                    {r.dataRecebimento.slice(0, 10)} · {r.formaPagamento} ·{' '}
+                    <span className={`status ${r.status.toLowerCase()}`}>{r.status}</span>
                     {r.inquilino ? ` · ${r.inquilino.nome}` : ''}
                   </div>
                 </div>
                 <div className="acoes">
                   <span className="value pos" style={{ fontSize: '1rem' }}>{brl(r.valor)}</span>
+                  {r.status !== 'PAGO' && (
+                    <button className="small" onClick={() => marcarPago(r)}>Marcar pago</button>
+                  )}
                   <button className="ghost small" onClick={() => setEditReceita(r)}>Editar</button>
                   <button className="ghost small danger" onClick={() => excluir('receitas', r)}>Excluir</button>
                 </div>
