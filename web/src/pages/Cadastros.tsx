@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api, INDICES_REAJUSTE, type Contrato, type Inquilino, type Pessoa } from '../api';
 import { useAuth } from '../auth';
+import { FotosImovel } from '../components/FotosImovel';
+import { Visualizador } from '../components/Visualizador';
 import { TopBar } from '../components/TopBar';
 import { ImovelNav } from '../components/ImovelNav';
 import { useImovelRealtime } from '../realtime';
@@ -17,6 +19,7 @@ export function Cadastros() {
   const [editInquilino, setEditInquilino] = useState<Inquilino | null>(null);
   const [editContrato, setEditContrato] = useState<Contrato | null>(null);
   const [reajustando, setReajustando] = useState<string | null>(null);
+  const [anexo, setAnexo] = useState<Contrato | null>(null);
 
   const carregar = useCallback(() => {
     Promise.all([
@@ -69,6 +72,7 @@ export function Cadastros() {
         </div>
 
         <PessoasComAcesso imovelId={id!} />
+        <FotosImovel imovelId={id!} />
 
         <div className="card">
           <h3 style={{ marginTop: 0 }}>Inquilinos</h3>
@@ -114,7 +118,7 @@ export function Cadastros() {
                     {c.anexoUrl ? (
                       <>
                         {' · '}
-                        <a href={c.anexoUrl} target="_blank" rel="noreferrer">contrato</a>
+                        <button className="link" onClick={() => setAnexo(c)}>ver contrato</button>
                       </>
                     ) : ''}
                   </div>
@@ -138,6 +142,9 @@ export function Cadastros() {
           )}
         </div>
       </div>
+      {anexo?.anexoUrl && (
+        <Visualizador url={anexo.anexoUrl} titulo={`Contrato de ${anexo.inquilino?.nome ?? 'inquilino'}`} onFechar={() => setAnexo(null)} />
+      )}
     </>
   );
 }

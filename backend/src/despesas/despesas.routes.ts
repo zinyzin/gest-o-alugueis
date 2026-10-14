@@ -4,6 +4,7 @@ import { prisma } from '../prisma.js';
 import { autenticar } from '../middleware/auth.js';
 import { garantirAcessoImovel } from '../lib/acesso.js';
 import { emitirParaImovel } from '../realtime.js';
+import { urlArquivo } from '../lib/arquivo.js';
 
 export const despesasRouter = Router();
 despesasRouter.use(autenticar);
@@ -18,7 +19,7 @@ const despesaSchema = z.object({
   fornecedor: z.string().optional(),
   valor: z.coerce.number().positive(),
   formaPagamento: z.enum(['PIX', 'BOLETO', 'TRANSFERENCIA', 'DINHEIRO', 'CARTAO']),
-  comprovanteUrl: z.string().url().optional(),
+  comprovanteUrl: urlArquivo.optional(),
 });
 
 // GET /despesas?imovelId=...&categoria=...&de=...&ate=...
@@ -72,7 +73,7 @@ despesasRouter.put('/:id', async (req, res, next) => {
     const dados = despesaSchema
       .omit({ imovelId: true })
       .partial()
-      .extend({ fornecedor: z.string().nullable().optional(), comprovanteUrl: z.string().url().nullable().optional() })
+      .extend({ fornecedor: z.string().nullable().optional(), comprovanteUrl: urlArquivo.nullable().optional() })
       .parse(req.body);
     const despesa = await prisma.despesa.update({ where: { id: req.params.id }, data: dados });
     emitirParaImovel(despesa.imovelId, 'despesa:atualizada', despesa);

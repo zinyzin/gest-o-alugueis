@@ -4,6 +4,7 @@ import { prisma } from '../prisma.js';
 import { autenticar } from '../middleware/auth.js';
 import { garantirAcessoImovel } from '../lib/acesso.js';
 import { emitirParaImovel } from '../realtime.js';
+import { urlArquivo } from '../lib/arquivo.js';
 
 export const imoveisRouter = Router();
 imoveisRouter.use(autenticar);
@@ -11,7 +12,7 @@ imoveisRouter.use(autenticar);
 const imovelSchema = z.object({
   endereco: z.string().min(1),
   descricao: z.string().optional(),
-  fotos: z.array(z.string().url()).optional(),
+  fotos: z.array(urlArquivo).max(30).optional(),
 });
 
 // Lista apenas os imóveis aos quais o usuário tem acesso.

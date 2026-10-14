@@ -24,7 +24,16 @@ export function criarApp() {
   app.get('/health', (_req, res) => res.json({ status: 'ok', hora: new Date().toISOString() }));
 
   // Arquivos enviados (comprovantes, contratos) — servidos estaticamente.
-  app.use('/arquivos', express.static(UPLOAD_DIR));
+  // nosniff: o navegador respeita o tipo informado e não "adivinha" HTML num arquivo.
+  app.use(
+    '/arquivos',
+    express.static(UPLOAD_DIR, {
+      dotfiles: 'deny',
+      setHeaders: (res) => {
+        res.setHeader('X-Content-Type-Options', 'nosniff');
+      },
+    }),
+  );
 
   // API sob /api para não colidir com as rotas do SPA (ex.: /imoveis/:id no web).
   app.use('/api/auth', authRouter);

@@ -12,6 +12,7 @@ import {
 import { TopBar } from '../components/TopBar';
 import { ImovelNav } from '../components/ImovelNav';
 import { useImovelRealtime } from '../realtime';
+import { Visualizador } from '../components/Visualizador';
 
 const brl = (v: string | number) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -25,6 +26,7 @@ export function Lancamentos() {
   const [erro, setErro] = useState('');
   const [editReceita, setEditReceita] = useState<Receita | null>(null);
   const [editDespesa, setEditDespesa] = useState<Despesa | null>(null);
+  const [comprovante, setComprovante] = useState<Despesa | null>(null);
 
   const carregar = useCallback(() => {
     Promise.all([
@@ -137,7 +139,7 @@ export function Lancamentos() {
                     {d.comprovanteUrl ? (
                       <>
                         {' · '}
-                        <a href={d.comprovanteUrl} target="_blank" rel="noreferrer">comprovante</a>
+                        <button className="link" onClick={() => setComprovante(d)}>ver comprovante</button>
                       </>
                     ) : ''}
                   </div>
@@ -152,6 +154,9 @@ export function Lancamentos() {
           )}
         </div>
       </div>
+      {comprovante?.comprovanteUrl && (
+        <Visualizador url={comprovante.comprovanteUrl} titulo={`Comprovante: ${comprovante.descricao}`} onFechar={() => setComprovante(null)} />
+      )}
     </>
   );
 }

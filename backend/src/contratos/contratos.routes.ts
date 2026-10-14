@@ -4,6 +4,7 @@ import { prisma } from '../prisma.js';
 import { autenticar } from '../middleware/auth.js';
 import { garantirAcessoImovel } from '../lib/acesso.js';
 import { emitirParaImovel } from '../realtime.js';
+import { urlArquivo } from '../lib/arquivo.js';
 import { env } from '../env.js';
 import { hojeNoFuso } from '../rotinas/datas.js';
 
@@ -20,7 +21,7 @@ const contratoSchema = z.object({
   indiceReajuste: z.enum(['IGPM', 'IPCA', 'INPC', 'OUTRO']).optional(),
   dataUltimoReajuste: z.coerce.date().optional(),
   valorCaucao: z.coerce.number().nonnegative().optional(),
-  anexoUrl: z.string().url().optional(),
+  anexoUrl: urlArquivo.optional(),
 });
 
 contratosRouter.get('/', async (req, res, next) => {
@@ -67,7 +68,7 @@ contratosRouter.put('/:id', async (req, res, next) => {
       .extend({
         dataFim: z.union([z.null(), z.coerce.date()]).optional(),
         valorCaucao: z.union([z.null(), z.coerce.number().nonnegative()]).optional(),
-        anexoUrl: z.string().url().nullable().optional(),
+        anexoUrl: urlArquivo.nullable().optional(),
       })
       .parse(req.body);
     const contrato = await prisma.contrato.update({ where: { id: req.params.id }, data: dados });
