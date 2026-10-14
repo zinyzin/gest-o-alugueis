@@ -11,6 +11,8 @@ export default defineConfig({
       DATABASE_URL,
       JWT_SECRET: 'segredo-de-teste-com-mais-de-16-caracteres',
       NODE_ENV: 'test',
+      // Muitos usuários são criados por arquivo de teste; o limite próprio é testado à parte.
+      LIMITE_CADASTRO: '10000',
     },
     globalSetup: ['./test/global-setup.ts'],
     fileParallelism: false,

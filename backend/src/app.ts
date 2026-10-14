@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { env } from './env.js';
@@ -17,7 +18,31 @@ import { tratarErros } from './middleware/error.js';
 
 export function criarApp() {
   const app = express();
+  if (env.TRUST_PROXY) app.set('trust proxy', env.TRUST_PROXY);
 
+  // Cabeçalhos de segurança. A política de conteúdo libera só o que o app usa: tudo da
+  // própria origem, estilos inline do React, socket (ws/wss) e PDF em iframe da mesma origem.
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        useDefaults: false,
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          connectSrc: ["'self'", 'ws:', 'wss:'],
+          frameSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          formAction: ["'self'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+      // O PDF do comprovante abre num iframe da mesma origem.
+      frameguard: { action: 'sameorigin' },
+    }),
+  );
   app.use(cors({ origin: env.CORS_ORIGIN }));
   app.use(express.json());
 

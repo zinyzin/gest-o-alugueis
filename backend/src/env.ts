@@ -13,6 +13,11 @@ const schema = z.object({
   FUSO_HORARIO: z.string().default('America/Sao_Paulo'),
   // Permite desligar as rotinas automáticas (ex.: numa segunda instância da API).
   ROTINAS_ATIVAS: z.enum(['true', 'false']).default('true'),
+  // Atrás de proxy (cloudflared, Railway): quantos saltos confiar para ler o IP real do cliente.
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  // Tentativas de login ERRADAS por IP e por e-mail a cada 15 min; cadastros por IP por hora.
+  LIMITE_LOGIN: z.coerce.number().int().positive().default(10),
+  LIMITE_CADASTRO: z.coerce.number().int().positive().default(10),
 });
 
 const parsed = schema.safeParse(process.env);
