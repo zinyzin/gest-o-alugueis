@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { api, brl, NOME_CATEGORIA, NOME_STATUS, type CategoriaDespesa, type Resumo, type StatusReceita } from '@/lib/api';
 import { useImovelRealtime } from '@/lib/realtime';
 import { useCores, type Cores } from '@/lib/tema';
@@ -63,7 +63,16 @@ export default function Dashboard() {
           setCarregando(true);
           carregar();
         }} />}>
-      <Stack.Screen options={{ title: endereco ?? 'Resumo' }} />
+      <Stack.Screen
+        options={{
+          title: endereco ?? 'Resumo',
+          headerRight: () => (
+            <Pressable onPress={() => router.push({ pathname: '/lancamentos/[id]', params: { id } })} hitSlop={8}>
+              <Text style={{ color: c.primaria }}>Lançamentos</Text>
+            </Pressable>
+          ),
+        }}
+      />
 
       <View style={s.periodos}>
         {PERIODOS.map((p) => (

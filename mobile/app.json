@@ -25,7 +25,15 @@
     "plugins": [
       "expo-router",
       "expo-status-bar",
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Permita o acesso à câmera para fotografar comprovantes.",
+          "photosPermission": "Permita o acesso às fotos para anexar comprovantes.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "scheme": "gestaoimovel",
     "experiments": {

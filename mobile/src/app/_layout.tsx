@@ -29,6 +29,9 @@ function Rotas() {
       <Stack.Protected guard={!!usuario}>
         <Stack.Screen name="index" options={{ title: 'Imóveis' }} />
         <Stack.Screen name="imovel/[id]" options={{ title: 'Resumo' }} />
+        <Stack.Screen name="lancamentos/[id]" options={{ title: 'Lançamentos' }} />
+        <Stack.Screen name="novo/[tipo]" options={{ title: 'Novo lançamento' }} />
+        <Stack.Screen name="avisos" options={{ title: 'Avisos' }} />
       </Stack.Protected>
     </Stack>
   );

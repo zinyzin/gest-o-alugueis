@@ -38,3 +38,14 @@ export function useImovelRealtime(imovelId: string | undefined, onChange: (event
     };
   }, [imovelId, onChange]);
 }
+
+// Escuta um evento da sala pessoal (ex.: novos avisos).
+export function useEventoPessoal(evento: string, onEvento: () => void) {
+  useEffect(() => {
+    const s = obterSocket();
+    s.on(evento, onEvento);
+    return () => {
+      s.off(evento, onEvento);
+    };
+  }, [evento, onEvento]);
+}

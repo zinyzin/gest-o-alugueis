@@ -55,11 +55,28 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   return data as T;
 }
 
+// Upload de foto (multipart) — retorna o caminho interno do comprovante (/arquivos/...).
+// No celular o FormData aceita {uri, name, type}; no navegador precisa do arquivo de verdade.
+async function uploadFoto(uri: string, nome: string, tipo: string): Promise<{ url: string }> {
+  const form = new FormData();
+  if (Platform.OS === 'web') form.append('arquivo', await (await fetch(uri)).blob(), nome);
+  else form.append('arquivo', { uri, name: nome, type: tipo } as unknown as Blob);
+  const res = await fetch(`${API_URL}/api/uploads`, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: form,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new ApiError(res.status, data?.mensagem ?? 'Falha no upload');
+  return data;
+}
+
 export const api = {
   get: <T>(path: string) => request<T>('GET', path),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, body),
   put: <T>(path: string, body?: unknown) => request<T>('PUT', path, body),
   del: <T>(path: string) => request<T>('DELETE', path),
+  uploadFoto,
 };
 
 // Tipos do domínio (espelham o backend; mesmos do web/src/api.ts).
@@ -73,8 +90,48 @@ export interface Resumo {
   despesasPorCategoria: { categoria: string; total: number; qtd: number }[];
 }
 
+export interface Notificacao {
+  id: string;
+  imovelId: string;
+  tipo: 'ALUGUEL_ATRASADO' | 'REAJUSTE' | 'CONTRATO_VENCENDO';
+  titulo: string;
+  mensagem: string;
+  criadoEm: string;
+  lida: boolean;
+  imovel: { id: string; endereco: string };
+}
+
+export type FormaPagamento = 'PIX' | 'BOLETO' | 'TRANSFERENCIA' | 'DINHEIRO' | 'CARTAO';
 export type StatusReceita = 'PAGO' | 'ATRASADO' | 'PENDENTE';
 export type CategoriaDespesa = 'AGUA' | 'LUZ' | 'IPTU' | 'CONDOMINIO' | 'MANUTENCAO' | 'REFORMA' | 'IMPOSTOS' | 'OUTRO';
+
+export const FORMAS_PAGAMENTO: FormaPagamento[] = ['PIX', 'BOLETO', 'TRANSFERENCIA', 'DINHEIRO', 'CARTAO'];
+export const STATUS_RECEITA: StatusReceita[] = ['PAGO', 'ATRASADO', 'PENDENTE'];
+export const CATEGORIAS_DESPESA: CategoriaDespesa[] = ['AGUA', 'LUZ', 'IPTU', 'CONDOMINIO', 'MANUTENCAO', 'REFORMA', 'IMPOSTOS', 'OUTRO'];
+export const NOME_FORMA: Record<FormaPagamento, string> = {
+  PIX: 'Pix', BOLETO: 'Boleto', TRANSFERENCIA: 'Transferência', DINHEIRO: 'Dinheiro', CARTAO: 'Cartão',
+};
+
+export interface Receita {
+  id: string;
+  dataRecebimento: string;
+  descricao: string;
+  valor: string;
+  formaPagamento: FormaPagamento;
+  status: StatusReceita;
+  inquilino?: { id: string; nome: string } | null;
+}
+
+export interface Despesa {
+  id: string;
+  dataPagamento: string;
+  categoria: CategoriaDespesa;
+  descricao: string;
+  fornecedor?: string | null;
+  valor: string;
+  formaPagamento: FormaPagamento;
+  comprovanteUrl?: string | null;
+}
 
 export const NOME_CATEGORIA: Record<CategoriaDespesa, string> = {
   AGUA: 'Água', LUZ: 'Luz', IPTU: 'IPTU', CONDOMINIO: 'Condomínio', MANUTENCAO: 'Manutenção',
@@ -84,3 +141,5 @@ export const NOME_STATUS: Record<StatusReceita, string> = { PAGO: 'Pago', ATRASA
 
 export const brl = (v: number | string) =>
   Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+// Datas do backend vêm em UTC à meia-noite: mostra o dia sem converter fuso.
+export const dataBR = (iso: string) => iso.slice(0, 10).split('-').reverse().join('/');

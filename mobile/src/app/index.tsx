@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { FlatList, Pressable, RefreshControl, StyleSheet, Text } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { api, type Imovel } from '@/lib/api';
+import { useEventoPessoal } from '@/lib/realtime';
 import { useAuth } from '@/lib/auth';
 import { useCores } from '@/lib/tema';
 
@@ -25,14 +26,28 @@ export default function Imoveis() {
   }, []);
   useEffect(carregar, [carregar]);
 
+  // Contador de avisos não lidos, atualizado ao vivo.
+  const [naoLidas, setNaoLidas] = useState(0);
+  const contarAvisos = useCallback(() => {
+    api.get<{ totalNaoLidas: number }>('/notificacoes?limite=1').then((r) => setNaoLidas(r.totalNaoLidas)).catch(() => {});
+  }, []);
+  // Reconta ao voltar para esta tela (ex.: depois de ler avisos).
+  useFocusEffect(contarAvisos);
+  useEventoPessoal('notificacao:criada', contarAvisos);
+
   return (
     <>
       <Stack.Screen
         options={{
           headerRight: () => (
-            <Pressable onPress={sair} hitSlop={8}>
-              <Text style={{ color: c.primaria }}>Sair</Text>
-            </Pressable>
+            <View style={s.acoes}>
+              <Pressable onPress={() => router.push('/avisos')} hitSlop={8}>
+                <Text style={{ color: c.primaria }}>Avisos{naoLidas > 0 ? ` (${naoLidas})` : ''}</Text>
+              </Pressable>
+              <Pressable onPress={sair} hitSlop={8}>
+                <Text style={{ color: c.primaria }}>Sair</Text>
+              </Pressable>
+            </View>
           ),
         }}
       />
@@ -69,6 +84,7 @@ export default function Imoveis() {
 
 const s = StyleSheet.create({
   lista: { padding: 16, gap: 12 },
+  acoes: { flexDirection: 'row', gap: 16 },
   cartao: { padding: 16, borderRadius: 12, borderWidth: 1, gap: 4 },
   endereco: { fontSize: 16, fontWeight: '600' },
 });
