@@ -102,6 +102,28 @@ describe('tempo real', () => {
     expect(recebidos).toEqual([]);
   });
 
+  it('quem perde o acesso sai da sala e para de receber os eventos na hora', async () => {
+    const dono = await criarUsuario('dono@teste.com');
+    const val = await criarUsuario('val@teste.com');
+    const auth = { Authorization: `Bearer ${dono}` };
+    const imovelId = await criarImovel(dono);
+    await api().post(`/api/imoveis/${imovelId}/compartilhar`).set(auth).send({ email: 'val@teste.com' }).expect(204);
+    const sVal = await conectar(val);
+    const recebidos: string[] = [];
+    sVal.on('receita:criada', () => recebidos.push('antes'));
+    sVal.emit('entrarImovel', imovelId);
+    await new Promise((ok) => setTimeout(ok, 200));
+    emitirParaImovel(imovelId, 'receita:criada', {});
+    await new Promise((ok) => setTimeout(ok, 200));
+    expect(recebidos).toEqual(['antes']);
+
+    const idVal = (await prisma.usuario.findUnique({ where: { email: 'val@teste.com' } }))!.id;
+    await api().delete(`/api/imoveis/${imovelId}/usuarios/${idVal}`).set(auth).expect(204);
+    emitirParaImovel(imovelId, 'receita:criada', {});
+    await new Promise((ok) => setTimeout(ok, 300));
+    expect(recebidos).toEqual(['antes']);
+  });
+
   it('recusa conexão sem token válido', async () => {
     await expect(conectar('token-falso')).rejects.toThrow();
   });

@@ -46,3 +46,15 @@ describe('upload', () => {
     await api().put(`/api/imoveis/${imovelId}`).set(auth).send({ fotos: ['/arquivos/../../.env'] }).expect(400);
   });
 });
+
+describe('endereços de arquivo', () => {
+  it('recusa URL de outro site mesmo com caminho /arquivos/', async () => {
+    const token = await criarUsuario('dono@teste.com');
+    const imovelId = await criarImovel(token);
+    await api()
+      .put(`/api/imoveis/${imovelId}`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ fotos: ['https://site-malicioso.com/arquivos/a.png'] })
+      .expect(400);
+  });
+});

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../prisma.js';
 import { autenticar } from '../middleware/auth.js';
 import { garantirAcessoImovel } from '../lib/acesso.js';
-import { emitirParaImovel } from '../realtime.js';
+import { emitirParaImovel, expulsarDaSala } from '../realtime.js';
 import { urlArquivo } from '../lib/arquivo.js';
 
 export const imoveisRouter = Router();
@@ -71,6 +71,8 @@ imoveisRouter.delete('/:id', async (req, res, next) => {
   try {
     await garantirAcessoImovel(req.usuario!.sub, req.params.id);
     await prisma.imovel.delete({ where: { id: req.params.id } });
+    emitirParaImovel(req.params.id, 'imovel:removido', { id: req.params.id });
+    expulsarDaSala(req.params.id);
     res.status(204).end();
   } catch (err) {
     next(err);
@@ -108,6 +110,7 @@ imoveisRouter.delete('/:id/usuarios/:usuarioId', async (req, res, next) => {
     );
     if (!removido) return res.status(400).json({ mensagem: 'O imóvel precisa ter ao menos uma pessoa com acesso' });
     emitirParaImovel(req.params.id, 'acesso:removido', { usuarioId: req.params.usuarioId });
+    expulsarDaSala(req.params.id, req.params.usuarioId);
     res.status(204).end();
   } catch (err) {
     next(err);

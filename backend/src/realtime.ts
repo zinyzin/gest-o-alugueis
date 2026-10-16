@@ -52,6 +52,14 @@ export function emitirParaImovel(imovelId: string, evento: string, dados: unknow
   io?.to(`imovel:${imovelId}`).emit(evento, dados);
 }
 
+// Tira da sala do imóvel quem perdeu o acesso (ou todos, se o imóvel foi excluído),
+// para que deixem de receber os eventos ao vivo na hora.
+export function expulsarDaSala(imovelId: string, usuarioId?: string) {
+  if (!io) return;
+  const alvo = usuarioId ? io.in(`usuario:${usuarioId}`) : io.in(`imovel:${imovelId}`);
+  alvo.socketsLeave(`imovel:${imovelId}`);
+}
+
 // Emite para a sala pessoal de cada pessoa com acesso ao imóvel (estejam ou não nele).
 export async function emitirParaPessoasDoImovel(imovelId: string, evento: string, dados: unknown) {
   if (!io) return;

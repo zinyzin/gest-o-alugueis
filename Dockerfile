@@ -23,6 +23,9 @@ RUN npx prisma generate && npm run build
 COPY --from=web /web/dist ./public
 
 ENV NODE_ENV=production
+# Sem root: a pasta de uploads é do usuário node (o volume herda o dono na criação).
+RUN mkdir -p /app/uploads && chown -R node:node /app/uploads
+USER node
 EXPOSE 3333
 # Aplica migrations pendentes e sobe a API.
 CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]
