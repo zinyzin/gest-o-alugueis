@@ -1,5 +1,5 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
-import { api, limparBanco, criarUsuario } from './helpers.js';
+import { api, limparBanco, criarUsuario, novoConvite } from './helpers.js';
 import { prisma } from '../src/prisma.js';
 
 beforeEach(limparBanco);
@@ -15,7 +15,7 @@ describe('autenticação', () => {
 
   it('recusa e-mail duplicado', async () => {
     await criarUsuario('ana@teste.com');
-    await api().post('/api/auth/registrar').send({ nome: 'Ana', email: 'ana@teste.com', senha: 'outra-senha' }).expect(409);
+    await api().post('/api/auth/registrar').send({ nome: 'Ana', email: 'ana@teste.com', senha: 'outra-senha', convite: await novoConvite() }).expect(409);
   });
 
   it('recusa senha errada e usuário inexistente com a mesma mensagem', async () => {

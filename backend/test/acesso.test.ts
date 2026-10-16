@@ -1,31 +1,66 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { api, limparBanco, criarUsuario, criarImovel } from './helpers.js';
+import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { api, limparBanco, criarUsuario, criarImovel, novoConvite } from './helpers.js';
 import { prisma } from '../src/prisma.js';
-import { env } from '../src/env.js';
 
 beforeEach(limparBanco);
-afterEach(() => {
-  env.CODIGO_CONVITE = undefined;
-});
 afterAll(() => prisma.$disconnect());
 
 describe('cadastro', () => {
   it('ignora tentativa de escolher o perfil ADMIN', async () => {
-    await api().post('/api/auth/registrar').send({ nome: 'X', email: 'x@teste.com', senha: 'senha-segura-1', perfil: 'ADMIN' }).expect(201);
+    await api().post('/api/auth/registrar').send({ nome: 'X', email: 'x@teste.com', senha: 'senha-segura-1', perfil: 'ADMIN', convite: await novoConvite() }).expect(201);
     expect((await prisma.usuario.findUnique({ where: { email: 'x@teste.com' } }))?.perfil).toBe('VISUALIZADOR');
   });
 
-  it('com código de convite definido, exige o código correto', async () => {
-    env.CODIGO_CONVITE = 'convite-secreto';
-    expect((await api().get('/api/auth/config').expect(200)).body).toEqual({ conviteObrigatorio: true });
+  it('exige convite válido, de uso único e no prazo', async () => {
     const dados = { nome: 'X', email: 'x@teste.com', senha: 'senha-segura-1' };
-    await api().post('/api/auth/registrar').send(dados).expect(403);
-    await api().post('/api/auth/registrar').send({ ...dados, codigoConvite: 'errado' }).expect(403);
-    await api().post('/api/auth/registrar').send({ ...dados, codigoConvite: 'convite-secreto' }).expect(201);
+    await api().post('/api/auth/registrar').send(dados).expect(400);
+    await api().post('/api/auth/registrar').send({ ...dados, convite: 'inexistente' }).expect(403);
+
+    const convite = await novoConvite();
+    expect((await api().get(`/api/convites/${convite}`).expect(200)).body).toEqual({ valido: true });
+    await api().post('/api/auth/registrar').send({ ...dados, convite }).expect(201);
+    // Já usado: não serve de novo, nem para outro e-mail.
+    await api().post('/api/auth/registrar').send({ ...dados, email: 'y@teste.com', convite }).expect(403);
+    expect((await api().get(`/api/convites/${convite}`).expect(200)).body).toEqual({ valido: false });
+
+    // Vencido.
+    const vencido = await novoConvite();
+    await prisma.convite.updateMany({ where: { usadoEm: null }, data: { expiraEm: new Date(Date.now() - 1000) } });
+    await api().post('/api/auth/registrar').send({ ...dados, email: 'z@teste.com', convite: vencido }).expect(403);
   });
 
-  it('sem código definido, o cadastro é livre', async () => {
-    expect((await api().get('/api/auth/config').expect(200)).body).toEqual({ conviteObrigatorio: false });
+  it('cadastro com e-mail repetido não gasta o convite', async () => {
+    await criarUsuario('x@teste.com');
+    const convite = await novoConvite();
+    await api().post('/api/auth/registrar').send({ nome: 'X', email: 'x@teste.com', senha: 's', convite }).expect(409);
+    await api().post('/api/auth/registrar').send({ nome: 'Y', email: 'y@teste.com', senha: 's', convite }).expect(201);
+  });
+
+  it('senha sem tamanho mínimo', async () => {
+    await api().post('/api/auth/registrar').send({ nome: 'X', email: 'x@teste.com', senha: '1', convite: await novoConvite() }).expect(201);
+    await api().post('/api/auth/login').send({ email: 'x@teste.com', senha: '1' }).expect(200);
+  });
+});
+
+describe('convites', () => {
+  it('só quem tem conta gera convite, com prazo escolhido', async () => {
+    await api().post('/api/convites').send({}).expect(401);
+    const token = await criarUsuario('dono@teste.com');
+    const auth = { Authorization: `Bearer ${token}` };
+    await api().post('/api/convites').set(auth).send({ minutos: 999 }).expect(400);
+
+    const antes = Date.now();
+    const res = await api().post('/api/convites').set(auth).send({ minutos: 30 }).expect(201);
+    const expira = new Date(res.body.expiraEm).getTime();
+    expect(expira - antes).toBeGreaterThanOrEqual(29 * 60_000);
+    expect(expira - antes).toBeLessThanOrEqual(31 * 60_000);
+    // O banco guarda só o hash do token.
+    expect(await prisma.convite.count({ where: { tokenHash: res.body.token } })).toBe(0);
+    // Padrão: 2 h.
+    const padrao = await api().post('/api/convites').set(auth).send({}).expect(201);
+    expect(new Date(padrao.body.expiraEm).getTime() - Date.now()).toBeGreaterThan(119 * 60_000);
+
+    await api().post('/api/auth/registrar').send({ nome: 'Val', email: 'val@teste.com', senha: 'x', convite: res.body.token }).expect(201);
   });
 });
 

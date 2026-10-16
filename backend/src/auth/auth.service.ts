@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import type { Perfil } from '@prisma/client';
+import type { Perfil, Prisma } from '@prisma/client';
 import { prisma } from '../prisma.js';
 import { env } from '../env.js';
 
@@ -15,12 +15,18 @@ export class AppError extends Error {
   }
 }
 
-export async function registrar(nome: string, email: string, senha: string, perfil?: Perfil) {
-  const existe = await prisma.usuario.findUnique({ where: { email } });
+export async function registrar(
+  nome: string,
+  email: string,
+  senha: string,
+  perfil?: Perfil,
+  db: Prisma.TransactionClient = prisma,
+) {
+  const existe = await db.usuario.findUnique({ where: { email } });
   if (existe) throw new AppError(409, 'E-mail já cadastrado');
 
   const senhaHash = await bcrypt.hash(senha, 10);
-  const usuario = await prisma.usuario.create({
+  const usuario = await db.usuario.create({
     data: { nome, email, senhaHash, ...(perfil ? { perfil } : {}) },
   });
 

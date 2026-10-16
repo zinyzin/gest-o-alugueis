@@ -57,8 +57,24 @@ model Usuario {
 
   imoveis  UsuarioImovel[]
   leituras NotificacaoLeitura[]
+  convites Convite[]
 
   @@map("usuarios")
+}
+
+// Link de convite para criar conta: prazo curto e uso único. Guarda só o hash do token.
+// Sem criador = gerado pelo terminal (primeira conta).
+model Convite {
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique @map("token_hash")
+  criadoPorId String?   @map("criado_por_id")
+  expiraEm    DateTime  @map("expira_em")
+  usadoEm     DateTime? @map("usado_em")
+  criadoEm    DateTime  @default(now()) @map("criado_em")
+
+  criadoPor Usuario? @relation(fields: [criadoPorId], references: [id], onDelete: Cascade)
+
+  @@map("convites")
 }
 
 // Acesso multiusuário: N usuários <-> N imóveis

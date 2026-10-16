@@ -14,6 +14,7 @@ import { uploadsRouter, UPLOAD_DIR } from './uploads/uploads.routes.js';
 import { dashboardRouter } from './dashboard/dashboard.routes.js';
 import { relatoriosRouter } from './relatorios/relatorios.routes.js';
 import { notificacoesRouter } from './notificacoes/notificacoes.routes.js';
+import { convitesRouter } from './convites/convites.routes.js';
 import { tratarErros } from './middleware/error.js';
 
 export function criarApp() {
@@ -62,6 +63,7 @@ export function criarApp() {
 
   // API sob /api para não colidir com as rotas do SPA (ex.: /imoveis/:id no web).
   app.use('/api/auth', authRouter);
+  app.use('/api/convites', convitesRouter);
   app.use('/api/imoveis', imoveisRouter);
   app.use('/api/inquilinos', inquilinosRouter);
   app.use('/api/contratos', contratosRouter);
