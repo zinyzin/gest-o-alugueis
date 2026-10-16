@@ -22,7 +22,8 @@ Tudo pelo [`bin/prod`](../bin/prod):
 - **Criar conta:** com `CODIGO_CONVITE` definido (o `setup` define), a tela pede o código. Passe o
   código só a quem vai usar. Depois, compartilhe o imóvel pela tela de Cadastros.
 - **Quick Tunnel** é um recurso de teste da Cloudflare, sem garantia de disponibilidade e com link
-  que muda. Para link fixo, use um túnel nomeado (precisa de domínio na Cloudflare) ou o Railway.
+  que muda. Depois de reiniciar o PC, app e banco voltam sozinhos, mas o túnel não: rode
+  `bin/prod on` de novo (link novo). Para link fixo, use um túnel nomeado (precisa de domínio na Cloudflare) ou o Railway.
 - **Restaurar um backup:** `docker exec -i gestao-imovel-pg pg_restore -U gestao -d gestao_imovel_prod --clean < arquivo.dump`.
 
 ## Railway (depois)
