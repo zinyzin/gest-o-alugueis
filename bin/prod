@@ -6,6 +6,7 @@
 #   bin/prod off       desliga o túnel e o app (o banco continua)
 #   bin/prod status    estado do app, do túnel e o link atual
 #   bin/prod backup    cópia do banco agora (também roda todo dia pelo timer)
+#   bin/prod convite [minutos]   link de convite para criar conta (30, 120 ou 1440; padrão 120)
 #   bin/prod agendar-backup   instala o timer diário (03:30) do backup, no systemd do usuário
 #
 # O túnel usa uma unidade própria (gestao-imovel-tunnel), separada da do playbook.
@@ -33,12 +34,10 @@ case ${1:-status} in
       cat >"$ENV_FILE" <<CONF_EOF
 DATABASE_URL=postgresql://gestao:gestao@db:5432/gestao_imovel_prod?schema=public
 JWT_SECRET=$(openssl rand -hex 32)
-JWT_EXPIRES_IN=7d
-# Código que a pessoa digita para criar conta. Troque por um seu.
-CODIGO_CONVITE=$(openssl rand -hex 6)
+JWT_EXPIRES_IN=30d
 FUSO_HORARIO=America/Sao_Paulo
 CONF_EOF
-      echo "criado $ENV_FILE (permissão 600). O código de convite está nele."
+      echo "criado $ENV_FILE (permissão 600). Primeira conta: bin/prod convite"
     else
       echo "já existe: $ENV_FILE"
     fi
@@ -66,6 +65,11 @@ CONF_EOF
   status)
     docker ps --filter name=gestao-imovel --format '{{.Names}}: {{.Status}}'
     if systemctl --user is-active -q "$UNIT"; then echo "túnel: ligado — $(link)"; else echo "túnel: desligado"; fi ;;
+  convite)
+    t=$(docker exec gestao-imovel-app node dist/scripts/convite.js "${2:-120}")
+    echo "local:   http://127.0.0.1:$PORTA/convite?token=$t"
+    u=$(link); [ -n "$u" ] && echo "público: $u/convite?token=$t"
+    echo "(uso único; vale ${2:-120} min)" ;;
   backup)
     mkdir -p "$BACKUPS" && chmod 700 "$BACKUPS"
     arquivo="$BACKUPS/gestao_imovel_prod-$(date +%Y%m%d-%H%M%S).dump"
@@ -99,5 +103,5 @@ UNIT_EOF
     systemctl --user daemon-reload
     systemctl --user enable --now gestao-imovel-backup.timer
     systemctl --user list-timers gestao-imovel-backup.timer --no-pager | head -3 ;;
-  *) echo "uso: bin/prod setup|on|off|status|backup|agendar-backup" >&2; exit 2 ;;
+  *) echo "uso: bin/prod setup|on|off|status|convite|backup|agendar-backup" >&2; exit 2 ;;
 esac

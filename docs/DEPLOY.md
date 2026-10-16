@@ -9,18 +9,20 @@ Tudo pelo [`bin/prod`](../bin/prod):
 
 | Comando | O que faz |
 |---|---|
-| `bin/prod setup` | Cria `~/.config/gestao-imovel/prod.env` (permissão 600) com `JWT_SECRET` aleatório e um `CODIGO_CONVITE`, e o banco `gestao_imovel_prod` no Postgres local. |
+| `bin/prod setup` | Cria `~/.config/gestao-imovel/prod.env` (permissão 600) com `JWT_SECRET` aleatório (sessão de 30 dias), e o banco `gestao_imovel_prod` no Postgres local. |
 | `bin/prod on` | Builda a imagem, sobe o app em `127.0.0.1:3400` e liga o túnel público. Mostra o link `*.trycloudflare.com` (muda a cada `on`). |
 | `bin/prod off` | Desliga o túnel e o app. O banco continua no ar. |
 | `bin/prod status` | Estado do app e do túnel, com o link atual. |
+| `bin/prod convite [minutos]` | Link de convite para criar conta, sem precisar de login (ex.: a primeira conta). Uso único; vale 30, 120 (padrão) ou 1440 min. |
 | `bin/prod backup` | Cópia do banco agora, em `~/backups/gestao-imovel` (guarda as 30 mais recentes). |
 | `bin/prod agendar-backup` | Instala o backup diário às 03:30 (timer do systemd do usuário). |
 
 - **Separado do desenvolvimento:** banco `gestao_imovel_prod`, uploads num volume Docker próprio,
   segredos fora do repositório. O túnel usa a unidade `gestao-imovel-tunnel`, separada da do playbook.
 - **Só nesta máquina:** app e banco escutam em `127.0.0.1`; de fora, só pelo túnel.
-- **Criar conta:** com `CODIGO_CONVITE` definido (o `setup` define), a tela pede o código. Passe o
-  código só a quem vai usar. Depois, compartilhe o imóvel pela tela de Cadastros.
+- **Criar conta:** só por link de convite (a tela de login não oferece cadastro). Quem já tem conta
+  gera o link em **Convidar pessoa**, no topo; a primeira conta usa `bin/prod convite`. Cada link
+  serve para uma conta e vence no prazo escolhido. Depois, compartilhe o imóvel pela tela de Cadastros.
 - **Quick Tunnel** é um recurso de teste da Cloudflare, sem garantia de disponibilidade e com link
   que muda. Depois de reiniciar o PC, app e banco voltam sozinhos, mas o túnel não: rode
   `bin/prod on` de novo (link novo). Para link fixo, use um túnel nomeado (precisa de domínio na Cloudflare) ou o Railway.
@@ -44,9 +46,8 @@ Socket.IO direto). Tudo empacotado pelo [`Dockerfile`](../Dockerfile) na raiz.
    |----------|-------|
    | `DATABASE_URL` | referência ao Postgres: `${{Postgres.DATABASE_URL}}` |
    | `JWT_SECRET` | um segredo forte e aleatório (`openssl rand -hex 32`) |
-   | `CODIGO_CONVITE` | código exigido para criar conta (recomendado) |
    | `TRUST_PROXY` | `1` (o Railway fica atrás de um proxy) |
-   | `JWT_EXPIRES_IN` | `7d` (opcional) |
+   | `JWT_EXPIRES_IN` | `30d` (opcional; duração da sessão) |
    | `CORS_ORIGIN` | a URL pública do app (opcional; mesma origem dispensa) |
 
    > `PORT` é injetado automaticamente pelo Railway — não defina manualmente.
@@ -57,8 +58,9 @@ Socket.IO direto). Tudo empacotado pelo [`Dockerfile`](../Dockerfile) na raiz.
 
 ## Primeiro acesso
 
-Crie a conta pela tela (**Criar conta**, com o código de convite) e cadastre o imóvel. Para dar
-acesso a outra pessoa, ela cria a própria conta e você a adiciona em **Cadastros → Pessoas com acesso**.
+Gere o primeiro link de convite pelo terminal (no Railway: `node dist/scripts/convite.js` no shell
+do serviço), crie a conta por ele e cadastre o imóvel. Para dar acesso a outra pessoa, gere um link
+em **Convidar pessoa**; ela cria a conta e você a adiciona em **Cadastros → Pessoas com acesso**.
 
 ## Observação sobre anexos
 
