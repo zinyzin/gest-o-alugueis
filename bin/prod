@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# Produção no PC: app (Docker) + banco local + acesso externo pelo cloudflared.
+#
+#   bin/prod setup     cria ~/.config/gestao-imovel/prod.env (segredos) e o banco gestao_imovel_prod
+#   bin/prod on        builda e sobe o app em 127.0.0.1:3400 e liga o túnel (link *.trycloudflare.com)
+#   bin/prod off       desliga o túnel e o app (o banco continua)
+#   bin/prod status    estado do app, do túnel e o link atual
+#   bin/prod backup    cópia do banco agora (também roda todo dia pelo timer)
+#   bin/prod agendar-backup   instala o timer diário (03:30) do backup, no systemd do usuário
+#
+# O túnel usa uma unidade própria (gestao-imovel-tunnel), separada da do playbook.
+set -euo pipefail
+cd "$(dirname "$0")/.."
+CONF=${XDG_CONFIG_HOME:-$HOME/.config}/gestao-imovel
+ENV_FILE=$CONF/prod.env
+export GESTAO_ENV_FILE=$ENV_FILE
+BACKUPS=${GESTAO_BACKUPS:-$HOME/backups/gestao-imovel}
+UNIT=gestao-imovel-tunnel
+PORTA=3400
+
+link() {
+  local t; t=$(systemctl --user show -p ActiveEnterTimestamp --value "$UNIT" 2>/dev/null)
+  [ -n "$t" ] || return 0
+  journalctl --user -u "$UNIT" --since "@$(date -d "$t" +%s)" -o cat --no-pager 2>/dev/null \
+    | grep -oE 'https://[a-z0-9-]+\.trycloudflare\.com' | tail -1 || true
+}
+
+case ${1:-status} in
+  setup)
+    mkdir -p "$CONF" && chmod 700 "$CONF"
+    if [ ! -f "$ENV_FILE" ]; then
+      umask 077
+      cat >"$ENV_FILE" <<CONF_EOF
+DATABASE_URL=postgresql://gestao:gestao@db:5432/gestao_imovel_prod?schema=public
+JWT_SECRET=$(openssl rand -hex 32)
+JWT_EXPIRES_IN=7d
+# Código que a pessoa digita para criar conta. Troque por um seu.
+CODIGO_CONVITE=$(openssl rand -hex 6)
+FUSO_HORARIO=America/Sao_Paulo
+CONF_EOF
+      echo "criado $ENV_FILE (permissão 600). O código de convite está nele."
+    else
+      echo "já existe: $ENV_FILE"
+    fi
+    docker compose up -d db
+    until docker exec gestao-imovel-pg pg_isready -U gestao >/dev/null 2>&1; do sleep 1; done
+    docker exec gestao-imovel-pg psql -U gestao -d postgres -tc "SELECT 1 FROM pg_database WHERE datname='gestao_imovel_prod'" | grep -q 1 \
+      || docker exec gestao-imovel-pg psql -U gestao -d postgres -c "CREATE DATABASE gestao_imovel_prod" >/dev/null
+    echo "banco gestao_imovel_prod pronto" ;;
+  on)
+    [ -f "$ENV_FILE" ] || { echo "rode antes: bin/prod setup" >&2; exit 1; }
+    docker compose --profile prod up -d --build app
+    for _ in $(seq 60); do curl -fsS "http://127.0.0.1:$PORTA/health" >/dev/null 2>&1 && break; sleep 1; done
+    curl -fsS "http://127.0.0.1:$PORTA/health" >/dev/null || { echo "app não respondeu; veja: docker logs gestao-imovel-app" >&2; exit 1; }
+    if ! systemctl --user is-active -q "$UNIT"; then
+      systemctl --user reset-failed "$UNIT" 2>/dev/null || true
+      systemd-run --user --quiet --unit="$UNIT" --description="Gestão de imóvel: túnel público para 127.0.0.1:$PORTA" \
+        cloudflared tunnel --no-autoupdate --url "http://127.0.0.1:$PORTA"
+    fi
+    for _ in $(seq 30); do u=$(link); [ -n "$u" ] && break; sleep 1; done
+    echo "no ar (PÚBLICO): ${u:-sem link ainda; veja bin/prod status}  — o link muda a cada 'on'" ;;
+  off)
+    systemctl --user stop "$UNIT" 2>/dev/null || true
+    docker compose --profile prod stop app
+    echo "desligado (banco continua no ar)" ;;
+  status)
+    docker ps --filter name=gestao-imovel --format '{{.Names}}: {{.Status}}'
+    if systemctl --user is-active -q "$UNIT"; then echo "túnel: ligado — $(link)"; else echo "túnel: desligado"; fi ;;
+  backup)
+    mkdir -p "$BACKUPS" && chmod 700 "$BACKUPS"
+    arquivo="$BACKUPS/gestao_imovel_prod-$(date +%Y%m%d-%H%M%S).dump"
+    docker exec gestao-imovel-pg pg_dump -U gestao -Fc gestao_imovel_prod >"$arquivo"
+    chmod 600 "$arquivo"
+    # Mantém as 30 cópias mais recentes.
+    ls -1t "$BACKUPS"/gestao_imovel_prod-*.dump | tail -n +31 | xargs -r rm --
+    echo "backup: $arquivo" ;;
+  agendar-backup)
+    dir=${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user
+    mkdir -p "$dir"
+    cat >"$dir/gestao-imovel-backup.service" <<UNIT_EOF
+[Unit]
+Description=Gestão de imóvel: backup do banco de produção
+
+[Service]
+Type=oneshot
+ExecStart=$PWD/bin/prod backup
+UNIT_EOF
+    cat >"$dir/gestao-imovel-backup.timer" <<UNIT_EOF
+[Unit]
+Description=Gestão de imóvel: backup diário
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+UNIT_EOF
+    systemctl --user daemon-reload
+    systemctl --user enable --now gestao-imovel-backup.timer
+    systemctl --user list-timers gestao-imovel-backup.timer --no-pager | head -3 ;;
+  *) echo "uso: bin/prod setup|on|off|status|backup|agendar-backup" >&2; exit 2 ;;
+esac

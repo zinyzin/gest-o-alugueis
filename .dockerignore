@@ -7,3 +7,5 @@ backend/uploads
 web/dist
 .git
 *.md
+**/test-results
+**/playwright-report

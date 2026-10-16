@@ -1,7 +1,5 @@
-# PostgreSQL para desenvolvimento local.
-# Uso: docker compose up -d
-# Depois configure backend/.env com:
-#   DATABASE_URL="postgresql://gestao:gestao@localhost:5433/gestao_imovel?schema=public"
+# Desenvolvimento: só o banco.      docker compose up -d
+# Produção no PC (perfil "prod"):   bin/prod on   (ver docs/DEPLOY.md)
 services:
   db:
     image: postgres:16-alpine
@@ -10,10 +8,35 @@ services:
       POSTGRES_USER: gestao
       POSTGRES_PASSWORD: gestao
       POSTGRES_DB: gestao_imovel
+    # Só nesta máquina: o banco não fica exposto na rede local.
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  # Imagem de produção (Dockerfile), com banco próprio (gestao_imovel_prod) no mesmo Postgres.
+  # Segredos ficam fora do repositório, em ~/.config/gestao-imovel/prod.env.
+  app:
+    profiles: ["prod"]
+    build: .
+    image: gestao-imovel:local
+    container_name: gestao-imovel-app
+    depends_on: [db]
+    # Definido pelo bin/prod (~/.config/gestao-imovel/prod.env); o /dev/null só evita erro
+    # no compose do dev, que não sobe este serviço.
+    env_file: ${GESTAO_ENV_FILE:-/dev/null}
+    environment:
+      PORT: "3333"
+      # Atrás do cloudflared, que conecta pelo loopback do host.
+      TRUST_PROXY: "1"
+    # Só nesta máquina; o acesso externo é pelo túnel.
+    ports:
+      - "127.0.0.1:3400:3333"
+    volumes:
+      - uploads:/app/uploads
+    restart: unless-stopped
 
 volumes:
   pgdata:
+  uploads:
