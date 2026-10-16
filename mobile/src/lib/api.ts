@@ -79,8 +79,8 @@ async function uploadFoto(uri: string, nome: string, tipo: string): Promise<{ ur
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
   });
-  const data = await res.json();
-  if (!res.ok) throw new ApiError(res.status, data?.mensagem ?? 'Falha no upload');
+  const data = res.headers.get('content-type')?.includes('application/json') ? await res.json() : null;
+  if (!res.ok || !data) throw new ApiError(res.status, data?.mensagem ?? 'Falha no upload');
   return data;
 }
 
