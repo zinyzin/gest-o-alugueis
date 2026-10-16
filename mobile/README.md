@@ -2,23 +2,24 @@
 
 App Android com paridade de funcionalidades do web, sincronizado em tempo real.
 
-**Stack:** React Native (Expo) + TypeScript + Socket.IO client.
+**Stack:** React Native (Expo SDK 58, Expo Router) + TypeScript + Socket.IO client.
 
-## Setup (a implementar na Fase 5)
+## Rodar
 
 ```bash
 cd mobile
 npm install
-npx expo start
+# Endereço do sistema: o link público (bin/prod status) ou http://<IP-do-PC>:3333 na mesma rede.
+EXPO_PUBLIC_API_URL=https://xxxx.trycloudflare.com npx expo start
 ```
+
+Abra no celular pelo Expo Go (QR code). No navegador (`w`), o backend precisa liberar a origem
+do Expo: `CORS_ORIGIN=http://localhost:8081`.
+
+Verificação: `npm run typecheck` e `npx eslint src`.
 
 ## Build do APK
 
 ```bash
-npx eas build -p android --profile preview
+npx eas-cli@latest build -p android --profile preview
 ```
-
-## Características
-
-- Offline-first: cache local reconciliado ao reconectar.
-- Reutiliza tipos de domínio e chamadas de API compartilhados com o web.
