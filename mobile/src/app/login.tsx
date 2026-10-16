@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { getApiUrl, setApiUrl } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCores } from '@/lib/tema';
 
 export default function Login() {
   const { login } = useAuth();
   const c = useCores();
+  const [servidor, setServidor] = useState(getApiUrl());
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
   const [erro, setErro] = useState('');
@@ -15,6 +17,7 @@ export default function Login() {
     setErro('');
     setEnviando(true);
     try {
+      await setApiUrl(servidor);
       await login(email.trim(), senha);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível entrar');
@@ -27,6 +30,16 @@ export default function Login() {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[s.tela, { backgroundColor: c.fundo }]}>
       <View style={[s.caixa, { backgroundColor: c.cartao, borderColor: c.borda }]}>
         <Text style={[s.titulo, { color: c.texto }]}>Gestão do Imóvel</Text>
+        <TextInput
+          style={campo}
+          placeholder="Endereço do servidor (https://...)"
+          placeholderTextColor={c.suave}
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          value={servidor}
+          onChangeText={setServidor}
+        />
         <TextInput
           style={campo}
           placeholder="E-mail"

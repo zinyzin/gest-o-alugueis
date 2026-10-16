@@ -1,12 +1,12 @@
 import { useEffect } from 'react';
 import { io, type Socket } from 'socket.io-client';
-import { API_URL, getToken } from './api';
+import { getApiUrl, getToken } from './api';
 
 let socket: Socket | null = null;
 
 function obterSocket(): Socket {
   if (!socket) {
-    socket = io(API_URL, { auth: { token: getToken() }, transports: ['websocket'] });
+    socket = io(getApiUrl(), { auth: { token: getToken() }, transports: ['websocket'] });
   }
   return socket;
 }

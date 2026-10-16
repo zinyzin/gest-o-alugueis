@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Linking, Platform, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { api, API_URL, brl, dataBR, NOME_CATEGORIA, NOME_FORMA, NOME_STATUS, type Despesa, type Receita } from '@/lib/api';
+import { api, getApiUrl, brl, dataBR, NOME_CATEGORIA, NOME_FORMA, NOME_STATUS, type Despesa, type Receita } from '@/lib/api';
 import { useImovelRealtime } from '@/lib/realtime';
 import { useCores } from '@/lib/tema';
 import { Botao, Cartao, Opcoes } from '@/lib/ui';
@@ -122,7 +122,7 @@ export default function Lancamentos() {
             {d.fornecedor ? ` · ${d.fornecedor}` : ''}
           </Text>
           {!!d.comprovanteUrl && (
-            <Pressable onPress={() => Linking.openURL(`${API_URL}${d.comprovanteUrl}`)} hitSlop={8}>
+            <Pressable onPress={() => Linking.openURL(`${getApiUrl()}${d.comprovanteUrl}`)} hitSlop={8}>
               <Text style={{ color: c.primaria }}>Ver comprovante</Text>
             </Pressable>
           )}

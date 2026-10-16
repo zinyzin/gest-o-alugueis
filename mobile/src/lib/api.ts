@@ -1,31 +1,44 @@
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
-// Endereço do sistema (o mesmo do web). No celular, use o link público ou o IP do PC na rede:
+// Endereço do sistema (o mesmo do web). Padrão vindo do build e trocável na tela de login,
+// porque o link público do cloudflared muda a cada "bin/prod on".
 //   EXPO_PUBLIC_API_URL=https://xxxx.trycloudflare.com npx expo start
-export const API_URL = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3333').replace(/\/$/, '');
+const API_PADRAO = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3333';
+let apiUrl = API_PADRAO;
+export const getApiUrl = () => apiUrl;
+const normalizar = (u: string) => u.trim().replace(/\/+$/, '');
 
-// O token fica guardado no SecureStore (no navegador, no localStorage) e em memória.
+// Token (no SecureStore; no navegador, no localStorage) e endereço ficam guardados no aparelho.
 const TOKEN_KEY = 'gia_token';
+const URL_KEY = 'gia_api_url';
 let token: string | null = null;
+
+const ler = (k: string) => (Platform.OS === 'web' ? Promise.resolve(localStorage.getItem(k)) : SecureStore.getItemAsync(k));
+const gravar = (k: string, v: string) => (Platform.OS === 'web' ? Promise.resolve(localStorage.setItem(k, v)) : SecureStore.setItemAsync(k, v));
+const apagar = (k: string) => (Platform.OS === 'web' ? Promise.resolve(localStorage.removeItem(k)) : SecureStore.deleteItemAsync(k));
 
 export const getToken = () => token;
 
 export async function carregarToken() {
-  token = Platform.OS === 'web' ? localStorage.getItem(TOKEN_KEY) : await SecureStore.getItemAsync(TOKEN_KEY);
+  apiUrl = (await ler(URL_KEY)) ?? API_PADRAO;
+  token = await ler(TOKEN_KEY);
   return token;
+}
+
+export async function setApiUrl(u: string) {
+  apiUrl = normalizar(u) || API_PADRAO;
+  await gravar(URL_KEY, apiUrl);
 }
 
 export async function setToken(t: string) {
   token = t;
-  if (Platform.OS === 'web') localStorage.setItem(TOKEN_KEY, t);
-  else await SecureStore.setItemAsync(TOKEN_KEY, t);
+  await gravar(TOKEN_KEY, t);
 }
 
 export async function clearToken() {
   token = null;
-  if (Platform.OS === 'web') localStorage.removeItem(TOKEN_KEY);
-  else await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await apagar(TOKEN_KEY);
 }
 
 export class ApiError extends Error {
@@ -39,7 +52,7 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
   if (token) headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) headers['Content-Type'] = 'application/json';
 
-  const res = await fetch(`${API_URL}/api${path}`, {
+  const res = await fetch(`${apiUrl}/api${path}`, {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -61,7 +74,7 @@ async function uploadFoto(uri: string, nome: string, tipo: string): Promise<{ ur
   const form = new FormData();
   if (Platform.OS === 'web') form.append('arquivo', await (await fetch(uri)).blob(), nome);
   else form.append('arquivo', { uri, name: nome, type: tipo } as unknown as Blob);
-  const res = await fetch(`${API_URL}/api/uploads`, {
+  const res = await fetch(`${apiUrl}/api/uploads`, {
     method: 'POST',
     headers: token ? { Authorization: `Bearer ${token}` } : {},
     body: form,
