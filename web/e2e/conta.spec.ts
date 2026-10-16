@@ -7,8 +7,11 @@ test('criar conta pela tela, receber o imóvel compartilhado e perder o acesso',
 
   // Nova pessoa cria a conta pela tela e entra direto, sem imóveis.
   const novo = await (await browser.newContext()).newPage();
+  // A tela de login não oferece cadastro; só o link de convite.
   await novo.goto('/');
-  await novo.getByRole('button', { name: 'Criar conta' }).click();
+  await expect(novo.getByRole('button', { name: 'Entrar' })).toBeVisible();
+  await expect(novo.getByText('Criar conta')).toHaveCount(0);
+  await novo.goto('/convite');
   const form = novo.locator('form');
   await campo(form, 'Nome').fill('Val');
   await campo(form, 'E-mail').fill(emailNovo);
